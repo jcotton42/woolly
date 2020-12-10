@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <UserSecretsId>dotnet-Wooly-8E12652B-F092-4ECE-A56E-117063D200A6</UserSecretsId>
+    <UserSecretsId>dotnet-Woolly-8E12652B-F092-4ECE-A56E-117063D200A6</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Wooly {
+namespace Woolly {
     public class Program {
         public static void Main(string[] args) {
             CreateHostBuilder(args).Build().Run();
@@ -13,6 +13,7 @@ namespace Wooly {
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .UseSystemd()
                 .ConfigureServices((hostContext, services) => {
                     services.AddHostedService<Worker>();
                 });
