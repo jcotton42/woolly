@@ -15,6 +15,8 @@ namespace Woolly {
             Host.CreateDefaultBuilder(args)
                 .UseSystemd()
                 .ConfigureServices((hostContext, services) => {
+                    services.Configure<DiscordOptions>(
+                        hostContext.Configuration.GetSection(DiscordOptions.SectionName));
                     services.AddHostedService<Worker>();
                 });
     }

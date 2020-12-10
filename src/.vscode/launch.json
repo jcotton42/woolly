@@ -10,9 +10,9 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/Wooly/bin/Debug/net5.0/Wooly.dll",
+            "program": "${workspaceFolder}/Woolly/bin/Debug/net5.0/Woolly.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/Wooly",
+            "cwd": "${workspaceFolder}/Woolly",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": false

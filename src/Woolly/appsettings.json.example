@@ -1,4 +1,16 @@
 {
+  "Discord": {
+    "GuildOptions": {
+      "GuildA": {
+        "OkEmoji": ":ok:",
+        "FailEmoji": ":fail:"
+      },
+      "GuildB": {
+        "OkEmoji": ":+1:",
+        "FailEmoji": ":-1:"
+      }
+    }
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",
