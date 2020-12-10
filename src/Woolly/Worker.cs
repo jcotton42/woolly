@@ -14,7 +14,7 @@ namespace Woolly {
 
         public Worker(ILogger<Worker> logger, IConfiguration configuration) {
             _logger = logger;
-            _discordToken = configuration["DiscordToken"];
+            _discordToken = configuration["Discord:ApiToken"];
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
