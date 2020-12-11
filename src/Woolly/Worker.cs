@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
-using Microsoft.Extensions.Configuration;
+using DSharpPlus.EventArgs;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -28,11 +26,24 @@ namespace Woolly {
                 TokenType = TokenType.Bot,
             });
 
+            discord.Ready += OnDiscordReady;
+            discord.GuildAvailable += OnDiscordGuildAvailable;
+
             await discord.ConnectAsync();
             try {
                 await Task.Delay(Timeout.Infinite, stoppingToken);
             } catch(OperationCanceledException) {}
             await discord.DisconnectAsync();
+        }
+
+        private Task OnDiscordReady(DiscordClient sender, ReadyEventArgs e) {
+            sender.Logger.LogInformation("Connected to Discord");
+            return Task.CompletedTask;
+        }
+
+        private Task OnDiscordGuildAvailable(DiscordClient sender, GuildCreateEventArgs e) {
+            sender.Logger.LogInformation($"Guild available: {e.Guild.Name}");
+            return Task.CompletedTask;
         }
     }
 }
