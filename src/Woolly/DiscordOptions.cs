@@ -5,6 +5,7 @@ namespace Woolly {
         public const string SectionName = "Discord";
 
         public string ApiToken { get; set; }
+        public string[] CommandPrefixes { get; set; }
         public IDictionary<string, GuildOptions> GuildOptions { get; set; }
     }
 

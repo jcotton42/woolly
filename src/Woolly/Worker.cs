@@ -2,21 +2,27 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
+using DSharpPlus.CommandsNext;
 using DSharpPlus.EventArgs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Woolly.Commands;
 
 namespace Woolly {
     public class Worker : BackgroundService {
         private readonly ILogger<Worker> _logger;
         private readonly ILoggerFactory _loggerFactory;
         private readonly DiscordOptions _discordOptions;
+        private readonly IServiceProvider _serviceProvider;
 
-        public Worker(ILogger<Worker> logger, ILoggerFactory loggerFactory, IOptions<DiscordOptions> discordOptions) {
+        public Worker(ILogger<Worker> logger, ILoggerFactory loggerFactory,
+            IOptions<DiscordOptions> discordOptions, IServiceProvider serviceProvider) {
             _logger = logger;
             _loggerFactory = loggerFactory;
             _discordOptions = discordOptions.Value;
+            _serviceProvider = serviceProvider;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -28,6 +34,12 @@ namespace Woolly {
 
             discord.Ready += OnDiscordReady;
             discord.GuildAvailable += OnDiscordGuildAvailable;
+
+            var commands = discord.UseCommandsNext(new CommandsNextConfiguration {
+                Services = _serviceProvider,
+                StringPrefixes = _discordOptions.CommandPrefixes,
+            });
+            commands.RegisterCommands<MinecraftCommandModule>();
 
             await discord.ConnectAsync();
             try {
