@@ -74,12 +74,16 @@ namespace Woolly.Services {
         }
 
         public async Task<List<string>> GetOnlinePlayers() {
-            var info = await ServerQuery.Info(IPAddress.Parse(_host), _queryPort, ServerQuery.ServerType.Minecraft) as MinecraftQueryInfo;
+            var info = (MinecraftQueryInfo)(await ServerQuery.Info(IPAddress.Parse(_host), _queryPort, ServerQuery.ServerType.Minecraft));
             return info.Players.ToList();
         }
 
         public void Dispose() {
-            _rcon.Dispose();
+            if(IsConnected) {
+                // this will throw NRE if it hasn't connected yet
+                // I wish I was kidding
+                _rcon.Dispose();
+            }
         }
     }
 }
