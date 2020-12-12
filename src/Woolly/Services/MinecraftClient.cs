@@ -16,7 +16,8 @@ namespace Woolly.Services {
         private readonly string _host;
         private readonly ushort _rconPort;
         private readonly ushort _queryPort;
-        private bool _connected = false;
+
+        public bool IsConnected { get; private set; } = false;
 
         public MinecraftClient(ILogger<MinecraftClient> logger,
             string nickname, string host, ushort rconPort, ushort queryPort,
@@ -29,14 +30,14 @@ namespace Woolly.Services {
             _rcon = new RCON(IPAddress.Parse(host), rconPort, rconPassword);
         }
 
-        public async Task ConnectAsync() {
-            if(_connected) {
+        internal async Task ConnectAsync() {
+            if(IsConnected) {
                 return;
             }
             await _rcon.ConnectAsync();
             _logger.LogInformation(ConnectedEventId,
                 "Connected to '{nickname}' RCON, at host {host} on port {port}", _nickname, _host, _rconPort);
-            _connected = true;
+            IsConnected = true;
         }
 
         public async Task<bool> AddWhitelistAsync(string user) {
