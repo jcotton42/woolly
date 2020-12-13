@@ -40,6 +40,7 @@ namespace Woolly {
                 StringPrefixes = _discordOptions.CommandPrefixes,
             });
             commands.RegisterCommands<MinecraftCommandModule>();
+            commands.RegisterCommands<AdminCommandModule>();
 
             await discord.ConnectAsync();
             try {
