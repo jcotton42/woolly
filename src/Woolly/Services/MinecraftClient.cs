@@ -1,6 +1,5 @@
-using CoreRCON;
-using CoreRCON.PacketFormats;
 using Microsoft.Extensions.Logging;
+using RconSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,12 +9,14 @@ using System.Threading.Tasks;
 namespace Woolly.Services {
     public sealed class MinecraftClient : IDisposable {
         private static readonly EventId ConnectedEventId = new EventId(1, "MinecraftConnected");
+        private static readonly EventId AuthFailedEventId = new EventId(2, "MinecraftAuthFailed");
         private readonly ILogger _logger;
-        private readonly RCON _rcon;
+        private readonly RconClient _rcon;
         private readonly string _nickname;
         private readonly string _host;
         private readonly ushort _rconPort;
         private readonly ushort _queryPort;
+        private readonly string _rconPassword;
 
         public bool IsConnected { get; private set; } = false;
 
@@ -27,36 +28,68 @@ namespace Woolly.Services {
             _host = host;
             _rconPort = rconPort;
             _queryPort = queryPort;
-            _rcon = new RCON(IPAddress.Parse(host), rconPort, rconPassword);
+            _rconPassword = rconPassword;
+            _rcon = RconClient.Create(host, rconPort);
         }
 
-        internal async Task ConnectAsync() {
+        /// <summary>
+        /// Attempts to connect and authenticate to the RCON listener.
+        /// </summary>
+        /// <returns>Whether connection and auth were successful.</returns>
+        internal async Task<bool> TryConnectAsync() {
             if(IsConnected) {
-                return;
+                return true;
             }
             await _rcon.ConnectAsync();
-            _logger.LogInformation(ConnectedEventId,
-                "Connected to '{nickname}' RCON, at host {host} on port {port}", _nickname, _host, _rconPort);
-            IsConnected = true;
+            if(await _rcon.AuthenticateAsync(_rconPassword)) {
+                _logger.LogInformation(ConnectedEventId,
+                    "Connected to '{nickname}' RCON, at host {host} on port {port}.", _nickname, _host, _rconPort);
+                IsConnected = true;
+                return true;
+            } else {
+                _logger.LogError(AuthFailedEventId,
+                    "Authentication to '{nickname}' RCON at host {host} on port {port} failed.", _nickname, _host, _rconPort);
+                return false;
+            }
         }
 
-        public async Task<bool> AddWhitelistAsync(string user) {
-            var result = await _rcon.SendCommandAsync($"whitelist add {user}");
+        /// <summary>
+        /// Adds a user to the whitelist.
+        /// </summary>
+        /// <param name="username">The Minecraft username to whitelist.</param>
+        /// <returns>
+        /// <para>Whether the user was successfully whitelisted.</para>
+        /// <para>Note <c>true</c> is also returned for users already on the whitelist.</para>
+        /// </returns>
+        public async Task<bool> AddWhitelistAsync(string username) {
+            var result = await _rcon.ExecuteCommandAsync($"whitelist add {username}");
             return result.StartsWith("added", StringComparison.OrdinalIgnoreCase);
         }
 
-        public async Task<bool> RemoveWhitelistAsync(string user) {
-            var result = await _rcon.SendCommandAsync($"whitelist remove {user}");
+        /// <summary>
+        /// Removes a user from the whitelist.
+        /// </summary>
+        /// <param name="username">The Minecraft username to remove.</param>
+        /// <returns>
+        /// <para>Whether the user was successfully removed.</para>
+        /// <para>Note that <c>false</c> is also returned for users not on the whitelist.</para>
+        /// </returns>
+        public async Task<bool> RemoveWhitelistAsync(string username) {
+            var result = await _rcon.ExecuteCommandAsync($"whitelist remove {username}");
             return result.StartsWith("removed", StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>
+        /// Gets all the users on the whitelist.
+        /// </summary>
+        /// <returns>The contents of the whitelist.</returns>
         public async Task<List<string>> ListWhitelistAsync() {
             // `whitelist list` format
             // "a"
             // "a and b"
             // "a, b and c"
             // because god forbid we just use commas
-            var response = (await _rcon.SendCommandAsync("whitelist list")).Split(":", 2)[1];
+            var response = (await _rcon.ExecuteCommandAsync("whitelist list")).Split(":", 2)[1];
 
             var temp = response.Split(" and ");
             if(string.IsNullOrWhiteSpace(temp[0])) {
@@ -69,21 +102,24 @@ namespace Woolly.Services {
             return users;
         }
 
+        /// <summary>
+        /// Broadcasts a message to all users on the server.
+        /// </summary>
+        /// <param name="message">The message to send.</param>
         public async Task SayAsync(string message) {
-            await _rcon.SendCommandAsync($"say {message}");
+            await _rcon.ExecuteCommandAsync($"say {message}");
         }
 
+        /// <summary>
+        /// Gets all the players currently online.
+        /// </summary>
+        /// <returns>The online players.</returns>
         public async Task<List<string>> GetOnlinePlayers() {
-            var info = (MinecraftQueryInfo)(await ServerQuery.Info(IPAddress.Parse(_host), _queryPort, ServerQuery.ServerType.Minecraft));
-            return info.Players.ToList();
+            throw new NotImplementedException();
         }
 
         public void Dispose() {
-            if(IsConnected) {
-                // this will throw NRE if it hasn't connected yet
-                // I wish I was kidding
-                _rcon.Dispose();
-            }
+            _rcon.Disconnect();
         }
     }
 }

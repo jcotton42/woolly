@@ -1,8 +1,6 @@
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Entities;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Threading.Tasks;
 using Woolly.Services;
 
@@ -20,7 +18,7 @@ namespace Woolly.Commands {
 
         [Command("list")]
         [Description("Lists available Minecraft servers")]
-        public async Task GreetCommand(CommandContext ctx) {
+        public async Task ListServersCommand(CommandContext ctx) {
             await ctx.RespondAsync(string.Join(", ", _clientFactory.Servers));
         }
 

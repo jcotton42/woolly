@@ -18,7 +18,6 @@ namespace Woolly {
                         hostContext.Configuration.GetSection(MinecraftOptions.SectionName));
 
                     services.AddSingleton<IMinecraftClientFactory, MinecraftClientFactory>();
-
                     services.AddHostedService<Worker>();
                 });
     }
