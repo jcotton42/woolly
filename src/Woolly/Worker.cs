@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Exceptions;
 using DSharpPlus.EventArgs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,6 +13,8 @@ using Woolly.Commands;
 
 namespace Woolly {
     public class Worker : BackgroundService {
+        private static readonly EventId CommandErroredEventId = new EventId(1, "CommandErrored");
+
         private readonly ILogger<Worker> _logger;
         private readonly ILoggerFactory _loggerFactory;
         private readonly DiscordOptions _discordOptions;
@@ -42,6 +45,8 @@ namespace Woolly {
             commands.RegisterCommands<MinecraftCommandModule>();
             commands.RegisterCommands<AdminCommandModule>();
 
+            commands.CommandErrored += OnCommandErrored;
+
             await discord.ConnectAsync();
             try {
                 await Task.Delay(Timeout.Infinite, stoppingToken);
@@ -56,6 +61,21 @@ namespace Woolly {
 
         private Task OnDiscordGuildAvailable(DiscordClient sender, GuildCreateEventArgs e) {
             sender.Logger.LogInformation($"Guild available: {e.Guild.Name}");
+            return Task.CompletedTask;
+        }
+
+        private Task OnCommandErrored(CommandsNextExtension sender, CommandErrorEventArgs e) {
+            if(e.Exception is ChecksFailedException) {
+                // act accordingly, eg react with an emoji
+                // TODO
+            } else {
+                sender.Client.Logger.LogError(
+                    CommandErroredEventId,
+                    e.Exception,
+                    "`{command}` failed with exception:",
+                    e.Command.QualifiedName
+                );
+            }
             return Task.CompletedTask;
         }
     }
