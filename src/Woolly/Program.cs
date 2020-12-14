@@ -48,7 +48,7 @@ namespace Woolly {
                     services.AddSingleton<IValidateOptions<MinecraftOptions>, MinecraftOptionsValidator>();
 
                     services.AddSingleton<IMinecraftClientFactory, MinecraftClientFactory>();
-                    services.AddHostedService<Worker>();
+                    services.AddHostedService<DiscordBot>();
                 });
     }
 
@@ -56,7 +56,7 @@ namespace Woolly {
         public static IHost ValidateOptions<T>(this IHost host) where T: class {
             var options = host.Services.GetService<IOptions<T>>();
             if(options is not null) {
-                // retreival triggers validation
+                // retrieval triggers validation
                 // this is hack until https://github.com/dotnet/runtime/issues/36391 is closed
                 var optionsValue = options.Value;
             }

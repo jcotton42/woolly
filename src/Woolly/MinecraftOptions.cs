@@ -39,11 +39,7 @@ namespace Woolly {
                 }
             }
 
-            if(failures.Any()) {
-                return ValidateOptionsResult.Fail(failures);
-            } else {
-                return ValidateOptionsResult.Success;
-            }
+            return failures.Any() ? ValidateOptionsResult.Fail(failures) : ValidateOptionsResult.Success;
         }
     }
 }
