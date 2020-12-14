@@ -1,13 +1,23 @@
 {
   "Discord": {
+    "CommandPrefixes": ["!"],
     "GuildOptions": {
       "GuildA": {
         "OkEmoji": ":ok:",
-        "FailEmoji": ":fail:"
+        "FailEmoji": ":no_entry_sign:"
       },
       "GuildB": {
         "OkEmoji": ":+1:",
         "FailEmoji": ":-1:"
+      }
+    }
+  },
+  "Minecraft": {
+    "Servers": {
+      "<server alias here>": {
+        "Host": "127.0.0.1",
+        "RconPort": 25575,
+        "QueryPort": 25565
       }
     }
   },
