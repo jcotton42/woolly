@@ -1,6 +1,7 @@
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 using System.Threading.Tasks;
 using Woolly.Services;
 
@@ -60,7 +61,12 @@ namespace Woolly.Commands {
                 if(client is null) {
                     return;
                 }
-                await ctx.RespondAsync(string.Join(", ", await client.ListWhitelistAsync()));
+                var whitelist = await client.ListWhitelistAsync();
+                if(whitelist.Any()) {
+                    await ctx.RespondAsync(string.Join(", ", whitelist));
+                } else {
+                    await ctx.RespondAsync("Whitelist is empty.");
+                }
             }
         }
     }
