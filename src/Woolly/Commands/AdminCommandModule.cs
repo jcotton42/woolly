@@ -1,11 +1,13 @@
+using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Woolly.Commands {
-    [Group("admin")]
     public class AdminCommandModule : BaseCommandModule {
         private static readonly EventId ShutdownRequestedEventId = new EventId(1, "ShutdownRequested");
         private readonly ILogger _logger;
@@ -14,6 +16,19 @@ namespace Woolly.Commands {
         public AdminCommandModule(ILogger<AdminCommandModule> logger, IHostApplicationLifetime hostApplicationLifetime) {
             _logger = logger;
             _hostApplicationLifetime = hostApplicationLifetime;
+        }
+
+        [Command("cleanup")]
+        [Description("Deletes bot messages in the current channel")]
+        [RequireBotPermissions(Permissions.ManageMessages | Permissions.ReadMessageHistory)]
+        public async Task CleanupCommand(CommandContext ctx, int limit = 100) {
+            var messages = (await ctx.Channel.GetMessagesAsync(limit))
+                .Where(m => m.Author.Id == ctx.Client.CurrentUser.Id).ToList();
+            var count = messages.Count;
+            await ctx.Channel.DeleteMessagesAsync(messages, "Deleted by cleanup command.");
+            var respone = await ctx.RespondAsync($"Deleted {count} messages.");
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            await respone.DeleteAsync();
         }
 
         [Command("shutdown")]
