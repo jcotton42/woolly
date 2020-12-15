@@ -25,7 +25,7 @@ namespace Woolly {
             } catch(OptionsValidationException e) {
                 logger.LogCritical(
                     InvalidOptionsEventId,
-                    "Host terminated due to invalid configuration: {errors}.",
+                    "Host terminated due to invalid configuration: {@Errors}.",
                     e.Failures
                 );
                 return 1;

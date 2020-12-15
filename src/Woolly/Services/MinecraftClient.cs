@@ -43,12 +43,12 @@ namespace Woolly.Services {
             await _rcon.ConnectAsync();
             if(await _rcon.AuthenticateAsync(_rconPassword)) {
                 _logger.LogInformation(ConnectedEventId,
-                    "Connected to '{nickname}' RCON, at host {host} on port {port}.", _nickname, _host, _rconPort);
+                    "Connected to '{Nickname}' RCON, at host {Host} on port {Port}.", _nickname, _host, _rconPort);
                 IsConnected = true;
                 return true;
             } else {
                 _logger.LogError(AuthFailedEventId,
-                    "Authentication to '{nickname}' RCON at host {host} on port {port} failed.", _nickname, _host, _rconPort);
+                    "Authentication to '{Nickname}' RCON at host {Host} on port {Port} failed.", _nickname, _host, _rconPort);
                 return false;
             }
         }

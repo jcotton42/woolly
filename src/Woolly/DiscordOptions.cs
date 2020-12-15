@@ -9,12 +9,26 @@ namespace Woolly {
 
         public string ApiToken { get; set; } = null!;
         public string[]? CommandPrefixes { get; set; }
-        public Dictionary<string, GuildOptions> GuildOptions { get; set; } = new();
+        public Dictionary<string, GuildOptions>? GuildOptions { get; set; }
+
+        public string GetOkEmoji(ulong guildID) {
+            if(GuildOptions is not null && GuildOptions.TryGetValue(guildID.ToString(), out var guildOptions)) {
+                return guildOptions.OkEmoji ?? ":ok_hand:";
+            }
+            return ":ok_hand:";
+        }
+
+        public string GetFailEmoji(ulong guildID) {
+            if(GuildOptions is not null && GuildOptions.TryGetValue(guildID.ToString(), out var guildOptions)) {
+                return guildOptions.FailEmoji ?? ":no_entry:";
+            }
+            return ":no_entry:";
+        }
     }
 
     public class GuildOptions {
-        public string OkEmoji { get; set; } = ":ballot_box_with_check:";
-        public string FailEmoji { get; set; } = ":x:";
+        public string? OkEmoji { get; set; }
+        public string? FailEmoji { get; set; }
     }
 
     public class DiscordOptionsValidator : IValidateOptions<DiscordOptions> {

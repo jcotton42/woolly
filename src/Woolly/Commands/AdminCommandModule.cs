@@ -36,7 +36,7 @@ namespace Woolly.Commands {
         [RequireOwner]
         public async Task ShutdownCommand(CommandContext ctx) {
             _logger.LogInformation(ShutdownRequestedEventId,
-                "{user} requested a bot shutdown.", $"{ctx.User.Username}#{ctx.User.Discriminator}");
+                "{User} requested a bot shutdown.", $"{ctx.User.Username}#{ctx.User.Discriminator}");
             await ctx.RespondAsync("Farewell!");
             _hostApplicationLifetime.StopApplication();
         }
