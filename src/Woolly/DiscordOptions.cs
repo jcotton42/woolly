@@ -22,13 +22,23 @@ namespace Woolly {
             if(GuildOptions is not null && GuildOptions.TryGetValue(guildID.ToString(), out var guildOptions)) {
                 return guildOptions.FailEmoji ?? ":no_entry:";
             }
+
             return ":no_entry:";
+        }
+
+        public ulong? GetMinecraftRoleID(ulong guildID) {
+            if(GuildOptions is not null && GuildOptions.TryGetValue(guildID.ToString(), out var guildOptions)) {
+                return guildOptions.MinecraftRoleID;
+            }
+
+            return null;
         }
     }
 
     public class GuildOptions {
         public string? OkEmoji { get; set; }
         public string? FailEmoji { get; set; }
+        public ulong? MinecraftRoleID { get; set; }
     }
 
     public class DiscordOptionsValidator : IValidateOptions<DiscordOptions> {
