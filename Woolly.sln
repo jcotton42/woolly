@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Woolly", "src\Woolly\Woolly.csproj", "{C1D259B3-3121-4845-B00A-64AFF5B93972}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.csproj", "{6FAD678F-6AEA-4850-96FA-FA1026C7EDA5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,6 +20,8 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6FAD678F-6AEA-4850-96FA-FA1026C7EDA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FAD678F-6AEA-4850-96FA-FA1026C7EDA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C1D259B3-3121-4845-B00A-64AFF5B93972}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C1D259B3-3121-4845-B00A-64AFF5B93972}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C1D259B3-3121-4845-B00A-64AFF5B93972}.Debug|x64.ActiveCfg = Debug|Any CPU
