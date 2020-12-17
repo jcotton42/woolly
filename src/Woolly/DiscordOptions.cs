@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
+using System.Net.Http.Headers;
 
 namespace Woolly {
     public class DiscordOptions {
@@ -33,12 +34,21 @@ namespace Woolly {
 
             return null;
         }
+
+        public string? GetDefaultMinecraftServer(ulong guildID) {
+            if(GuildOptions is not null && GuildOptions.TryGetValue(guildID.ToString(), out var guildOptions)) {
+                return guildOptions.DefaultMinecraftServer;
+            }
+
+            return null;
+        }
     }
 
     public class GuildOptions {
         public string? OkEmoji { get; set; }
         public string? FailEmoji { get; set; }
         public ulong? MinecraftRoleID { get; set; }
+        public string? DefaultMinecraftServer { get; set; }
     }
 
     public class DiscordOptionsValidator : IValidateOptions<DiscordOptions> {

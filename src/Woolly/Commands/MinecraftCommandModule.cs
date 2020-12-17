@@ -24,10 +24,16 @@ namespace Woolly.Commands {
         [Command("list")]
         [Description("Lists available Minecraft servers")]
         public async Task ListServersCommand(CommandContext ctx) {
-            await ctx.RespondAsync(string.Join(", ", _clientFactory.Servers));
+            if(_clientFactory.Servers.Any()) {
+                var servers = string.Join(", ", _clientFactory.Servers);
+                await ctx.RespondAsync($"Available servers: {servers}");
+            } else {
+                await ctx.RespondAsync("No servers are configured.");
+            }
         }
 
         [Group("whitelist")]
+        [Aliases("wl")]
         [Description("Whitelisting of users")]
         public class MinecraftWhitelistCommandModule : BaseCommandModule {
             private readonly ILogger _logger;
@@ -43,8 +49,14 @@ namespace Woolly.Commands {
 
             [Command("add")]
             [Description("Adds a user to the whitelist")]
-            public async Task AddCommand(CommandContext ctx, string user) {
-                await ctx.RespondAsync($"This command would add {user} to the default server's whitelist");
+            [RequirePermissions(Permissions.ManageRoles)]
+            public async Task AddCommand(CommandContext ctx, string minecraftUser, DiscordMember guildMember) {
+                if(_discordOptions.GetDefaultMinecraftServer(ctx.Guild.Id) is string server) {
+                    await AddCommand(ctx, server, minecraftUser, guildMember);
+                } else {
+                    await ctx.RespondAsync("This guild has no configured default Minecraft server.");
+                    throw new ArgumentException(nameof(server));
+                }
             }
 
             [Command("add")]
@@ -67,9 +79,16 @@ namespace Woolly.Commands {
             }
 
             [Command("remove")]
+            [Aliases("rm")]
             [Description("Removes a user from the whitelist")]
-            public async Task RemoveCommand(CommandContext ctx, string user) {
-                await ctx.RespondAsync($"This command would remove {user} from the default server's whitelist");
+            [RequirePermissions(Permissions.ManageRoles)]
+            public async Task RemoveCommand(CommandContext ctx, string minecraftUser, DiscordMember guildMember) {
+                if(_discordOptions.GetDefaultMinecraftServer(ctx.Guild.Id) is string server) {
+                    await RemoveCommand(ctx, server, minecraftUser, guildMember);
+                } else {
+                    await ctx.RespondAsync("This guild has no configured default Minecraft server.");
+                    throw new ArgumentException(nameof(server));
+                }
             }
 
             [Command("remove")]
@@ -91,9 +110,15 @@ namespace Woolly.Commands {
             }
 
             [Command("list")]
+            [Aliases("ls")]
             [Description("Lists the users on the whitelist")]
             public async Task ListCommand(CommandContext ctx) {
-                await ctx.RespondAsync("This command would show the whitelist for the default server");
+                if(_discordOptions.GetDefaultMinecraftServer(ctx.Guild.Id) is string server) {
+                    await ListCommand(ctx, server);
+                } else {
+                    await ctx.RespondAsync("This guild has no configured default Minecraft server.");
+                    throw new ArgumentException(nameof(server));
+                }
             }
 
             [Command("list")]
