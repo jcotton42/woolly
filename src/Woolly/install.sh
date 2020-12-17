@@ -6,7 +6,7 @@ SYSTEMD_DIR="/usr/local/lib/systemd/system/"
 
 service_exists() {
     local name=$1
-    if systemctl list-units --full -all | grep -Fq "$name.service"; then
+    if systemctl list-units --full --all | grep -Fq "$name.service"; then
         return 0
     else
         return 1
