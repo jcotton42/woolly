@@ -10,6 +10,7 @@ namespace Woolly.Services {
     public sealed class MinecraftClient : IDisposable {
         private static readonly EventId ConnectedEventId = new EventId(1, "MinecraftConnected");
         private static readonly EventId AuthFailedEventId = new EventId(2, "MinecraftAuthFailed");
+        private static readonly string[] WhitelistSplits = new string[]{":", ", ", " and "};
         private readonly ILogger _logger;
         private readonly RconClient _rcon;
         private readonly string _nickname;
@@ -84,22 +85,11 @@ namespace Woolly.Services {
         /// </summary>
         /// <returns>The contents of the whitelist.</returns>
         public async Task<List<string>> ListWhitelistAsync() {
-            // `whitelist list` format
-            // "a"
-            // "a and b"
-            // "a, b and c"
-            // because god forbid we just use commas
-            var response = (await _rcon.ExecuteCommandAsync("whitelist list")).Split(":", 2)[1];
-
-            var temp = response.Split(" and ");
-            if(string.IsNullOrWhiteSpace(temp[0])) {
-                return new List<string>();
-            }
-            var users = new List<string>(temp[0].Split(", "));
-            if(temp.Length > 1) {
-                users.Add(temp[1]);
-            }
-            return users;
+            var response = await _rcon.ExecuteCommandAsync("whitelist list");
+            return response
+                .Split(WhitelistSplits, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Skip(1) // skip the part before the colon
+                .ToList();
         }
 
         /// <summary>
