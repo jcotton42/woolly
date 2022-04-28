@@ -9,15 +9,10 @@ public class Program {
 
     public static int Main(string[] args) {
         var host = CreateHostBuilder(args).Build();
-        var logger = host.Services.GetService<ILogger<Program>>();
+        var logger = host.Services.GetRequiredService<ILogger<Program>>();
 
         try {
-            host
-                // eager validation hack
-                // https://github.com/dotnet/runtime/issues/36391#issuecomment-631089093
-                .ValidateOptions<MinecraftOptions>()
-                .ValidateOptions<DiscordOptions>()
-                .Run();
+            host.Run();
             return 0;
         } catch(OptionsValidationException e) {
             logger.LogCritical(
@@ -36,26 +31,16 @@ public class Program {
         Host.CreateDefaultBuilder(args)
             .ConfigureServices((hostContext, services) => {
                 services.AddOptions<DiscordOptions>()
-                    .Bind(hostContext.Configuration.GetSection(DiscordOptions.SectionName));
+                    .Bind(hostContext.Configuration.GetSection(DiscordOptions.SectionName))
+                    .ValidateOnStart();
                 services.AddSingleton<IValidateOptions<DiscordOptions>, DiscordOptionsValidator>();
 
                 services.AddOptions<MinecraftOptions>()
-                    .Bind(hostContext.Configuration.GetSection(MinecraftOptions.SectionName));
+                    .Bind(hostContext.Configuration.GetSection(MinecraftOptions.SectionName))
+                    .ValidateOnStart();
                 services.AddSingleton<IValidateOptions<MinecraftOptions>, MinecraftOptionsValidator>();
 
                 services.AddSingleton<IMinecraftClientFactory, MinecraftClientFactory>();
                 services.AddHostedService<DiscordBot>();
             });
-}
-
-public static class OptionsBuilderValidationExtensions {
-    public static IHost ValidateOptions<T>(this IHost host) where T: class {
-        var options = host.Services.GetService<IOptions<T>>();
-        if(options is not null) {
-            // retrieval triggers validation
-            // this is hack until https://github.com/dotnet/runtime/issues/36391 is closed
-            var optionsValue = options.Value;
-        }
-        return host;
-    }
 }
