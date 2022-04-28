@@ -10,10 +10,10 @@ using Woolly.Commands;
 namespace Woolly; 
 
 public class DiscordBot : BackgroundService {
-    private static readonly EventId CommandErroredEventId = new EventId(1, "CommandErrored");
-    private static readonly EventId DiscordReadyEventId = new EventId(2, "DiscordReady");
-    private static readonly EventId GuideAvailableEventId = new EventId(3, "GuildAvailable");
-    private static readonly EventId InsufficientPermissionsEventId = new EventId(4, "InsufficientPermissions");
+    private static readonly EventId CommandErroredEventId = new(1, "CommandErrored");
+    private static readonly EventId DiscordReadyEventId = new(2, "DiscordReady");
+    private static readonly EventId GuideAvailableEventId = new(3, "GuildAvailable");
+    private static readonly EventId InsufficientPermissionsEventId = new(4, "InsufficientPermissions");
 
     private readonly ILogger<DiscordBot> _logger;
     private readonly ILoggerFactory _loggerFactory;

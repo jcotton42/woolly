@@ -1,46 +1,41 @@
 using Microsoft.Extensions.Options;
+using Woolly;
 using Woolly.Services;
 
-namespace Woolly; 
+var invalidOptionsEventId = new EventId(1, "InvalidOptions");
+var unexpectedTerminationEventId = new EventId(2, "UnexpectedTermination");
 
-public class Program {
-    private static readonly EventId InvalidOptionsEventId = new EventId(1, "InvalidOptions");
-    private static readonly EventId UnexpectedTerminationEventId = new EventId(2, "UnexpectedTermination");
+var host = Host
+    .CreateDefaultBuilder(args)
+    .ConfigureServices((hostContext, services) => {
+        services.AddOptions<DiscordOptions>()
+            .Bind(hostContext.Configuration.GetSection(DiscordOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<DiscordOptions>, DiscordOptionsValidator>();
 
-    public static int Main(string[] args) {
-        var host = CreateHostBuilder(args).Build();
-        var logger = host.Services.GetRequiredService<ILogger<Program>>();
+        services.AddOptions<MinecraftOptions>()
+            .Bind(hostContext.Configuration.GetSection(MinecraftOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<MinecraftOptions>, MinecraftOptionsValidator>();
 
-        try {
-            host.Run();
-            return 0;
-        } catch(OptionsValidationException e) {
-            logger.LogCritical(
-                InvalidOptionsEventId,
-                "Host terminated due to invalid configuration: {@Errors}.",
-                e.Failures
-            );
-            return 1;
-        } catch(Exception e) {
-            logger.LogCritical(UnexpectedTerminationEventId, e, "Host terminated unexpectedly.");
-            return 2;
-        }
-    }
+        services.AddSingleton<IMinecraftClientFactory, MinecraftClientFactory>();
+        services.AddHostedService<DiscordBot>();
+    })
+    .Build();
 
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureServices((hostContext, services) => {
-                services.AddOptions<DiscordOptions>()
-                    .Bind(hostContext.Configuration.GetSection(DiscordOptions.SectionName))
-                    .ValidateOnStart();
-                services.AddSingleton<IValidateOptions<DiscordOptions>, DiscordOptionsValidator>();
+var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Woolly");
 
-                services.AddOptions<MinecraftOptions>()
-                    .Bind(hostContext.Configuration.GetSection(MinecraftOptions.SectionName))
-                    .ValidateOnStart();
-                services.AddSingleton<IValidateOptions<MinecraftOptions>, MinecraftOptionsValidator>();
-
-                services.AddSingleton<IMinecraftClientFactory, MinecraftClientFactory>();
-                services.AddHostedService<DiscordBot>();
-            });
+try {
+    host.Run();
+    return 0;
+} catch(OptionsValidationException e) {
+    logger.LogCritical(
+        invalidOptionsEventId,
+        "Host terminated due to invalid configuration: {@Errors}.",
+        e.Failures
+    );
+    return 1;
+} catch(Exception e) {
+    logger.LogCritical(unexpectedTerminationEventId, e, "Host terminated unexpectedly.");
+    return 2;
 }

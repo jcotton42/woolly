@@ -3,9 +3,9 @@ using RconSharp;
 namespace Woolly.Services; 
 
 public sealed class MinecraftClient : IDisposable {
-    private static readonly EventId ConnectedEventId = new EventId(1, "MinecraftConnected");
-    private static readonly EventId AuthFailedEventId = new EventId(2, "MinecraftAuthFailed");
-    private static readonly string[] WhitelistSplits = new string[]{":", ", ", " and "};
+    private static readonly EventId ConnectedEventId = new(1, "MinecraftConnected");
+    private static readonly EventId AuthFailedEventId = new(2, "MinecraftAuthFailed");
+    private static readonly string[] WhitelistSplits = {":", ", ", " and "};
     private readonly ILogger _logger;
     private readonly RconClient _rcon;
     private readonly string _nickname;

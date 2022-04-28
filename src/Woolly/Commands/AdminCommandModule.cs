@@ -5,7 +5,7 @@ using DSharpPlus.CommandsNext.Attributes;
 namespace Woolly.Commands; 
 
 public class AdminCommandModule : BaseCommandModule {
-    private static readonly EventId ShutdownRequestedEventId = new EventId(1, "ShutdownRequested");
+    private static readonly EventId ShutdownRequestedEventId = new(1, "ShutdownRequested");
     private readonly ILogger _logger;
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
 
