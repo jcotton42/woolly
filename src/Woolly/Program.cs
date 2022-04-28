@@ -1,66 +1,41 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
+using Woolly;
 using Woolly.Services;
 
-namespace Woolly {
-    public class Program {
-        private static readonly EventId InvalidOptionsEventId = new EventId(1, "InvalidOptions");
-        private static readonly EventId UnexpectedTerminationEventId = new EventId(2, "UnexpectedTermination");
+var invalidOptionsEventId = new EventId(1, "InvalidOptions");
+var unexpectedTerminationEventId = new EventId(2, "UnexpectedTermination");
 
-        public static int Main(string[] args) {
-            var host = CreateHostBuilder(args).Build();
-            var logger = host.Services.GetService<ILogger<Program>>();
+var host = Host
+    .CreateDefaultBuilder(args)
+    .ConfigureServices((hostContext, services) => {
+        services.AddOptions<DiscordOptions>()
+            .Bind(hostContext.Configuration.GetSection(DiscordOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<DiscordOptions>, DiscordOptionsValidator>();
 
-            try {
-                host
-                    // eager validation hack
-                    // https://github.com/dotnet/runtime/issues/36391#issuecomment-631089093
-                    .ValidateOptions<MinecraftOptions>()
-                    .ValidateOptions<DiscordOptions>()
-                    .Run();
-                return 0;
-            } catch(OptionsValidationException e) {
-                logger.LogCritical(
-                    InvalidOptionsEventId,
-                    "Host terminated due to invalid configuration: {@Errors}.",
-                    e.Failures
-                );
-                return 1;
-            } catch(Exception e) {
-                logger.LogCritical(UnexpectedTerminationEventId, e, "Host terminated unexpectedly.");
-                return 2;
-            }
-        }
+        services.AddOptions<MinecraftOptions>()
+            .Bind(hostContext.Configuration.GetSection(MinecraftOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<MinecraftOptions>, MinecraftOptionsValidator>();
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .UseSystemd()
-                .ConfigureServices((hostContext, services) => {
-                    services.AddOptions<DiscordOptions>()
-                        .Bind(hostContext.Configuration.GetSection(DiscordOptions.SectionName));
-                    services.AddSingleton<IValidateOptions<DiscordOptions>, DiscordOptionsValidator>();
+        services.AddSingleton<IMinecraftClientFactory, MinecraftClientFactory>();
+        services.AddHostedService<DiscordBot>();
+    })
+    .Build();
 
-                    services.AddOptions<MinecraftOptions>()
-                        .Bind(hostContext.Configuration.GetSection(MinecraftOptions.SectionName));
-                    services.AddSingleton<IValidateOptions<MinecraftOptions>, MinecraftOptionsValidator>();
+var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Woolly");
 
-                    services.AddSingleton<IMinecraftClientFactory, MinecraftClientFactory>();
-                    services.AddHostedService<DiscordBot>();
-                });
-    }
-
-    public static class OptionsBuilderValidationExtensions {
-        public static IHost ValidateOptions<T>(this IHost host) where T: class {
-            var options = host.Services.GetService<IOptions<T>>();
-            if(options is not null) {
-                // retrieval triggers validation
-                // this is hack until https://github.com/dotnet/runtime/issues/36391 is closed
-                var optionsValue = options.Value;
-            }
-            return host;
-        }
-    }
+try {
+    host.Run();
+    return 0;
+} catch(OptionsValidationException e) {
+    logger.LogCritical(
+        invalidOptionsEventId,
+        "Host terminated due to invalid configuration: {@Errors}.",
+        e.Failures
+    );
+    return 1;
+} catch(Exception e) {
+    logger.LogCritical(unexpectedTerminationEventId, e, "Host terminated unexpectedly.");
+    return 2;
 }
