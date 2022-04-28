@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26124.0
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32414.318
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Woolly", "src\Woolly\Woolly.csproj", "{C1D259B3-3121-4845-B00A-64AFF5B93972}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.csproj", "{6FAD678F-6AEA-4850-96FA-FA1026C7EDA5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Woolly", "src\Woolly\Woolly.csproj", "{C1D259B3-3121-4845-B00A-64AFF5B93972}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -16,12 +14,7 @@ Global
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6FAD678F-6AEA-4850-96FA-FA1026C7EDA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6FAD678F-6AEA-4850-96FA-FA1026C7EDA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C1D259B3-3121-4845-B00A-64AFF5B93972}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C1D259B3-3121-4845-B00A-64AFF5B93972}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C1D259B3-3121-4845-B00A-64AFF5B93972}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -34,5 +27,11 @@ Global
 		{C1D259B3-3121-4845-B00A-64AFF5B93972}.Release|x64.Build.0 = Release|Any CPU
 		{C1D259B3-3121-4845-B00A-64AFF5B93972}.Release|x86.ActiveCfg = Release|Any CPU
 		{C1D259B3-3121-4845-B00A-64AFF5B93972}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {76D4C19D-B01E-4CF8-8A7B-64F3B737AA15}
 	EndGlobalSection
 EndGlobal
