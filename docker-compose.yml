@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  woolly:
+    image: docker.io/jcotton42/woolly
+    build:
+      context: .
+      dockerfile: src/Woolly/Dockerfile

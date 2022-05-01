@@ -7,6 +7,9 @@ var unexpectedTerminationEventId = new EventId(2, "UnexpectedTermination");
 
 var host = Host
     .CreateDefaultBuilder(args)
+    .ConfigureAppConfiguration(configuration => {
+        configuration.AddKeyPerFile("/run/secrets", optional: true);
+    })
     .ConfigureServices((hostContext, services) => {
         services.AddOptions<DiscordOptions>()
             .Bind(hostContext.Configuration.GetSection(DiscordOptions.SectionName))
