@@ -1,2 +1,0 @@
-# woolly
-A Discord bot
