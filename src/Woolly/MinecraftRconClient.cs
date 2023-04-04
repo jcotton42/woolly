@@ -46,8 +46,7 @@ public sealed class MinecraftRconClient : IDisposable
     {
         var length = EncodePacket(packet, _buffer);
         _stream.Write(_buffer, 0, length);
-
-        _stream.Read(_buffer);
+        var read = _stream.Read(_buffer);
         var responseEnd = BinaryPrimitives.ReadInt32LittleEndian(_buffer) + 4;
         response = DecodePacket(_buffer.AsSpan()[4..responseEnd]);
 

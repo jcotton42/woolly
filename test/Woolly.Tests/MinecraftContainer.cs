@@ -1,6 +1,8 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 
+using Xunit.Abstractions;
+
 namespace Woolly.Tests;
 
 public sealed class MinecraftContainer : IAsyncLifetime
@@ -14,7 +16,7 @@ public sealed class MinecraftContainer : IAsyncLifetime
 
     public MinecraftContainer()
     {
-        RconPassword = Guid.NewGuid().ToString();
+        RconPassword = RandomString.Create(12);
         _container = new ContainerBuilder()
             .WithImage("docker.io/itzg/minecraft-server:java8")
             .WithEnvironment("VERSION", "1.12.2")
@@ -22,6 +24,7 @@ public sealed class MinecraftContainer : IAsyncLifetime
             .WithEnvironment("ENABLE_RCON", "true")
             .WithEnvironment("RCON_PASSWORD", RconPassword)
             .WithPortBinding(RconPortNumber, assignRandomHostPort: true)
+            //.WithWaitStrategy(Wait.ForUnixContainer().UntilContainerIsHealthy())
             .Build();
     }
 
