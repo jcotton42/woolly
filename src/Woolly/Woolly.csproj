@@ -1,21 +1,18 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <AssemblyName>woolly</AssemblyName>
+    <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>true</ImplicitUsings>
-    <UserSecretsId>dotnet-Woolly-8E12652B-F092-4ECE-A56E-117063D200A6</UserSecretsId>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <DockerfileContext>..\..</DockerfileContext>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-Woolly-bd58d101-fa02-4eeb-9c26-b1a4d2e408ef</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DSharpPlus" Version="4.2.0" />
-    <PackageReference Include="DSharpPlus.CommandsNext" Version="4.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.KeyPerFile" Version="6.0.4" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.15.1" />
-    <PackageReference Include="RconSharp" Version="2.0.1" />
+    <InternalsVisibleTo Include="Woolly.Tests" />
+    <PackageReference Include="FluentValidation" Version="11.5.2" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.5.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+    <PackageReference Include="Remora.Discord" Version="2023.2.0" />
+    <PackageReference Include="System.IO.Pipelines" Version="7.0.0" />
   </ItemGroup>
 </Project>
