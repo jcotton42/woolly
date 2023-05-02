@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 
 using FluentAssertions;
 
-using Woolly.Rcon;
+using Woolly.Features.Rcon;
 
 namespace Woolly.Tests.Rcon;
 

@@ -1,6 +1,6 @@
 using System.Threading.Channels;
 
-using Woolly.Rcon;
+using Woolly.Features.Rcon;
 
 namespace Woolly.Tests.Fakes;
 

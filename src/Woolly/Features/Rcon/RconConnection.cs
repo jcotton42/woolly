@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 
-namespace Woolly.Rcon;
+namespace Woolly.Features.Rcon;
 
 public interface IRconConnection : IDisposable
 {

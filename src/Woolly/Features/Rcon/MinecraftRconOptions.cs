@@ -1,4 +1,4 @@
-namespace Woolly.Rcon;
+namespace Woolly.Features.Rcon;
 
 public sealed class MinecraftRconOptions
 {

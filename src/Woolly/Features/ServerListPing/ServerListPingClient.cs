@@ -4,16 +4,45 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
-using Remora.Discord.Commands.Extensions;
+using Remora.Rest.Core;
 using Remora.Results;
 
-namespace Woolly.ServerListPing;
+using Woolly.Data;
+
+namespace Woolly.Features.ServerListPing;
+
+public sealed class ServerListPingClientFactory
+{
+    private readonly WoollyContext _db;
+    private readonly IServiceProvider _serviceProvider;
+
+    public ServerListPingClientFactory(WoollyContext db, IServiceProvider serviceProvider)
+    {
+        _db = db;
+        _serviceProvider = serviceProvider;
+    }
+
+    public async Task<Result<ServerListPingClient>> GetClientAsync(Snowflake guildId, string name, CancellationToken ct)
+    {
+        var server = await _db.MinecraftServers.FirstOrDefaultAsync(s => s.GuildId == guildId && s.Name == name, ct);
+        if (server is null) return new NotFoundError($"No Minecraft server named `{name}` is registered in this guild.");
+
+        var options = new ServerListPingClientOptions { Host = server.Host, Port = server.PingPort };
+        var client = ActivatorUtilities.CreateInstance<ServerListPingClient>(_serviceProvider, options);
+
+        var connectResult = await client.ConnectAsync(ct);
+        if (!connectResult.IsSuccess) return Result<ServerListPingClient>.FromError(connectResult);
+
+        return client;
+    }
+}
 
 public sealed partial class ServerListPingClient
 {
     // TODO find out what sending -1 does
+    // TODO also test with very low and very high (lower/higher than the Minecraft version supports) versions
     private const int ProtocolVersion = -1;
 
     private readonly ILogger _logger;
@@ -22,12 +51,11 @@ public sealed partial class ServerListPingClient
     private readonly ServerListPingTransport _transport;
 
     public ServerListPingClient(ILogger<ServerListPingClient> logger,
-        ServerListPingTransport transport,
-        IOptions<ServerListPingClientOptions> options)
+        ServerListPingTransport transport, ServerListPingClientOptions options)
     {
         _logger = logger;
-        _host = options.Value.Host;
-        _port = options.Value.Port;
+        _host = options.Host;
+        _port = options.Port;
         _transport = transport;
     }
 
@@ -89,17 +117,17 @@ public sealed partial class ServerListPingClient
         return sw.Elapsed;
     }
 
-    [LoggerMessage(EventId = 0, Level = LogLevel.Information, Message = "Connected to {host}:{port}")]
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Connected to {Host}:{Port}")]
     private partial void Connected(string host, int port);
 
-    [LoggerMessage(EventId = 100, Level = LogLevel.Error, Message = "Failed to connect to {host}:{port}: {message}")]
+    [LoggerMessage(EventId = 100, Level = LogLevel.Error, Message = "Failed to connect to {Host}:{Port}: {Message}")]
     private partial void ConnectFailed(string host, int port, string message);
 
     [LoggerMessage(EventId = 101, Level = LogLevel.Error,
-        Message = "Failed to get status for {host}:{port}: {message}")]
+        Message = "Failed to get status for {Host}:{Port}: {Message}")]
     private partial void StatusFailed(string host, int port, string message);
 
-    [LoggerMessage(EventId = 102, Level = LogLevel.Error, Message = "Ping failed for {host}:{port}: {message}")]
+    [LoggerMessage(EventId = 102, Level = LogLevel.Error, Message = "Ping failed for {Host}:{Port}: {Message}")]
     private partial void PingFailed(string host, int port, string message);
 }
 
@@ -119,8 +147,9 @@ public sealed class ServerListPingTransport : IDisposable
     private PipeReader? _reader;
     private PipeWriter? _writer;
 
-    public async Task ConnectAsync(string host, int port, CancellationToken ct)
+    internal async Task ConnectAsync(string host, int port, CancellationToken ct)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
         await socket.ConnectAsync(host, port, ct);
         _stream = new NetworkStream(socket, ownsSocket: true);

@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Woolly.ServerListPing;
+namespace Woolly.Features.ServerListPing;
 
 public interface IOutbound
 {
@@ -109,7 +109,7 @@ public sealed class ServerStatus
     public required PlayersPayload Players { get; init; }
 
     [JsonPropertyName("description")]
-    public required Description Description { get; init; }
+    public Description? Description { get; init; }
 
     [JsonPropertyName("favicon")]
     public string? Favicon { get; init; }
@@ -130,7 +130,7 @@ public sealed class PlayersPayload
     public int Online { get; init; }
 
     [JsonPropertyName("sample")]
-    public required Player[] Players { get; init; }
+    public Player[]? Players { get; init; }
 }
 
 public sealed class Player
@@ -153,7 +153,7 @@ public sealed class VersionPayload
 
 public static class VarString
 {
-    public static bool TryReadVarString(this SequenceReader<byte> reader, [NotNullWhen(true)] out string? value)
+    public static bool TryReadVarString(ref this SequenceReader<byte> reader, [NotNullWhen(true)] out string? value)
     {
         value = default;
         if (!reader.TryReadVarInt(out var bytes)) return false;
@@ -179,7 +179,7 @@ public static class VarString
 
 public static class VarJson
 {
-    public static bool TryReadVarJson<T>(this SequenceReader<byte> reader, [NotNullWhen(true)] out T? value)
+    public static bool TryReadVarJson<T>(ref this SequenceReader<byte> reader, [NotNullWhen(true)] out T? value)
     {
         value = default;
         if (!reader.TryReadVarInt(out var byteCount)) return false;
@@ -205,7 +205,7 @@ public static class VarInt
         _ => 5,
     };
 
-    public static bool TryReadVarInt(this SequenceReader<byte> reader, out int value)
+    public static bool TryReadVarInt(ref this SequenceReader<byte> reader, out int value)
     {
         value = 0;
         var position = 0;

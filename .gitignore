@@ -1,6 +1,8 @@
 ## Custom ignores
 # Prevent accidentally committing my own settings
-appsettings*.json
+appsettings.Development.json
+# Database files
+*.db*
 # NUKE output directory
 /output/
 

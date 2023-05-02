@@ -1,0 +1,28 @@
+version: '3.7'
+
+services:
+  minecraft:
+    image: docker.io/itzg/minecraft-server:java8
+    ports:
+      - "25565:25565"
+      - "25575:25575"
+    environment:
+      - EULA=TRUE
+      - VERSION=1.12.2
+      - ENABLE_RCON=true
+      - RCON_PASSWORD=password
+  seq:
+    image: docker.io/datalust/seq:2023.1
+    environment:
+      - ACCEPT_EULA=Y
+    ports:
+      - "8041:80"
+      - "5341:5341"
+  postgres:
+    image: docker.io/postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=woolly

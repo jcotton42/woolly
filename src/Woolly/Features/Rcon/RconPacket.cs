@@ -2,7 +2,7 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Text;
 
-namespace Woolly.Rcon;
+namespace Woolly.Features.Rcon;
 
 public readonly struct RconPacket
 {

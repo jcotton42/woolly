@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Woolly.Rcon;
+namespace Woolly.Features.Rcon;
 
 public sealed class RconClient : IDisposable
 {

@@ -2,7 +2,7 @@ using FluentAssertions;
 
 using Moq;
 
-using Woolly.Rcon;
+using Woolly.Features.Rcon;
 using Woolly.Tests.Fakes;
 
 namespace Woolly.Tests.Rcon;

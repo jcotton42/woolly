@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace Woolly.Rcon;
+namespace Woolly.Features.Rcon;
 
 public sealed class MinecraftRconClient
 {
