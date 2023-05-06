@@ -1,10 +1,14 @@
+using System.Diagnostics;
 using System.Threading.Channels;
 
+using Remora.Results;
+
 using Woolly.Features.Rcon;
+using Woolly.Infrastructure;
 
 namespace Woolly.Tests.Fakes;
 
-public sealed class FakeRconServer : IRconConnection
+public sealed class FakeRconServer : ITcpPacketTransport
 {
     private readonly Channel<RconPacket> _channel;
     private readonly string _host;
@@ -31,30 +35,31 @@ public sealed class FakeRconServer : IRconConnection
         return Task.CompletedTask;
     }
 
-    public async Task<RconPacket?> ReceiveAsync(CancellationToken token)
+    public async Task<Result<T>> ReceiveAsync<T>(PacketReader<T> tryReadPacket, CancellationToken ct) where T : notnull
     {
         AssertConnected();
-        return await _channel.Reader.ReadAsync(token);
+        return Result<T>.FromSuccess((T)(object)await _channel.Reader.ReadAsync(ct));
     }
 
-    public Task SendAsync(RconPacket packet, CancellationToken token)
+    public Task<Result> SendAsync<T>(T packet, PacketWriter<T> writePacket, CancellationToken ct) where T : notnull
     {
         AssertConnected();
-        if (_isAuthenticated && packet.Type == RconPacketType.Command)
+        var rconPacket = (RconPacket)(object)packet;
+        if (_isAuthenticated && rconPacket.Type == RconPacketType.Command)
         {
-            if (packet.Payload == "")
+            if (rconPacket.Payload == "")
             {
                 _channel.Writer.TryWrite(new RconPacket
                 {
-                    Id = packet.Id, Type = RconPacketType.Response, Payload = "",
+                    Id = rconPacket.Id, Type = RconPacketType.Response, Payload = "",
                 });
             }
             else if (SendLongResponses)
             {
                 var count = Random.Shared.Next(5000, 12000);
                 var payload =
-                    $"In response to Id = {packet.Id}, Payload = {packet.Payload}, here's {count} ones: {new string('1', count)}";
-                foreach (var response in ChunkPayload(packet.Id, payload))
+                    $"In response to Id = {rconPacket.Id}, Payload = {rconPacket.Payload}, here's {count} ones: {new string('1', count)}";
+                foreach (var response in ChunkPayload(rconPacket.Id, payload))
                 {
                     _channel.Writer.TryWrite(response);
                 }
@@ -63,22 +68,22 @@ public sealed class FakeRconServer : IRconConnection
             {
                 _channel.Writer.TryWrite(new RconPacket
                 {
-                    Id = packet.Id,
+                    Id = rconPacket.Id,
                     Type = RconPacketType.Response,
-                    Payload = $"Response to Id = {packet.Id}, Payload = {packet.Payload}",
+                    Payload = $"Response to Id = {rconPacket.Id}, Payload = {rconPacket.Payload}",
                 });
             }
         }
         else if (_isAuthenticated)
         {
-            throw new InvalidOperationException($"Client is authenticated, but sent packet type of {packet.Type}");
+            throw new InvalidOperationException($"Client is authenticated, but sent packet type of {rconPacket.Type}");
         }
-        else if (packet.Type == RconPacketType.Login && packet.Payload == _password)
+        else if (rconPacket.Type == RconPacketType.Login && rconPacket.Payload == _password)
         {
             _isAuthenticated = true;
             _channel.Writer.TryWrite(new RconPacket
             {
-                Id = packet.Id, Type = RconPacketType.Login, Payload = "Logged in",
+                Id = rconPacket.Id, Type = RconPacketType.Login, Payload = "Logged in",
             });
         }
         else
@@ -89,10 +94,10 @@ public sealed class FakeRconServer : IRconConnection
             });
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(Result.FromSuccess());
     }
 
-    private IEnumerable<RconPacket> ChunkPayload(int id, string payload)
+    private static IEnumerable<RconPacket> ChunkPayload(int id, string payload)
     {
         const int maxPayloadSize = 4096;
         for (int start = 0; start < payload.Length; start += maxPayloadSize)
@@ -106,7 +111,7 @@ public sealed class FakeRconServer : IRconConnection
         }
     }
 
-    private void AssertConnected()
+    public void AssertConnected()
     {
         if (!IsConnected) throw new InvalidOperationException("Not connected.");
     }

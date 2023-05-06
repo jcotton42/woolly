@@ -13,15 +13,16 @@ public readonly struct RconPacket
     /// <summary>
     /// Tries to read an <see cref="RconPacket"/> from the given byte sequence.
     /// </summary>
-    /// <param name="sequence">The <see cref="ReadOnlySequence{T}"/> to read from.</param>
+    /// <param name="buffer">
+    /// The <see cref="ReadOnlySequence{T}"/> to read from. Advanced past the packet if read
+    /// successfully.
+    /// </param>
     /// <param name="packet">When <c>true</c> is returned, the read packet.</param>
-    /// <param name="consumed">When <c>true</c> is returned, the sequence position that was consumed up to.</param>
     /// <returns>If the packet was successfully read.</returns>
-    public static bool TryRead(ReadOnlySequence<byte> sequence, out RconPacket packet, out SequencePosition consumed)
+    public static bool TryRead(ref ReadOnlySequence<byte> buffer, out RconPacket packet)
     {
         packet = default;
-        consumed = default;
-        var reader = new SequenceReader<byte>(sequence);
+        var reader = new SequenceReader<byte>(buffer);
         if (!reader.TryReadLittleEndian(out int remaining)) return false;
         if (reader.Remaining < remaining) return false;
         // we now know the sequence has the whole packet, so no need to check these Trys
@@ -43,34 +44,33 @@ public readonly struct RconPacket
         reader.Advance(2);
 
         packet = new RconPacket { Id = id, Type = (RconPacketType)type, Payload = payload };
-        consumed = reader.Position;
+        buffer = buffer.Slice(reader.Position);
         return true;
     }
 
     /// <summary>
-    /// Tries to write an <see cref="RconPacket"/> to the given span.
+    /// Writes an <see cref="RconPacket"/> to the given <paramref name="writer"/>.
     /// </summary>
-    /// <param name="span">The span to write to.</param>
-    /// <param name="length">The length of the packet. Set even if <c>false</c> is returned.</param>
-    /// <returns>If <paramref name="span"/> was long enough for the packet to be written.</returns>
-    public bool TryWrite(Span<byte> span, out int length)
+    /// <param name="writer">The buffer to write to.</param>
+    public void Write(IBufferWriter<byte> writer)
     {
         const int idOffset = 4;
         const int typeOffset = 8;
         const int payloadOffset = 12;
+
         var payloadLength = Encoding.Latin1.GetByteCount(Payload);
         // 10 = sizeof(id) + sizeof(type) + NULL terminator on Payload + NULL pad byte
         var remainder = payloadLength + 10;
         // 4 bytes for the remainder
-        length = remainder + 4;
-        if (span.Length < length) return false;
-        BinaryPrimitives.WriteInt32LittleEndian(span, remainder);
-        BinaryPrimitives.WriteInt32LittleEndian(span[idOffset..], Id);
-        BinaryPrimitives.WriteInt32LittleEndian(span[typeOffset..], (int)Type);
-        Encoding.Latin1.GetBytes(Payload, span[payloadOffset..]);
-        span[(payloadOffset + payloadLength)] = 0; // NULL terminator
-        span[(payloadOffset + payloadLength + 1)] = 0; // NULL padding byte
-        return true;
+        var length = remainder + 4;
+        var buffer = writer.GetSpan(length);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer, remainder);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer[idOffset..], Id);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer[typeOffset..], (int)Type);
+        Encoding.Latin1.GetBytes(Payload, buffer[payloadOffset..]);
+        buffer[payloadOffset + payloadLength] = 0; // NULL terminator
+        buffer[payloadOffset + payloadLength + 1] = 0; // NULL padding byte
+        writer.Advance(length);
     }
 }
 

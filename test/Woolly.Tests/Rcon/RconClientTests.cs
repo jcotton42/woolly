@@ -2,7 +2,10 @@ using FluentAssertions;
 
 using Moq;
 
+using Remora.Results;
+
 using Woolly.Features.Rcon;
+using Woolly.Infrastructure;
 using Woolly.Tests.Fakes;
 
 namespace Woolly.Tests.Rcon;
@@ -19,14 +22,15 @@ public sealed class RconClientTests
     public RconClientTests()
     {
         _fakeRconServer = new FakeRconServer(Host, Port, Password);
-        _client = new RconClient(_fakeRconServer);
+        _client = new RconClient(_fakeRconServer, () => { },
+            new RconOptions { Hostname = Host, Port = Port, Password = Password });
     }
 
     [Fact]
     public async Task Login_With_Correct_Password_Does_Not_Throw()
     {
         await _client
-            .Awaiting(c => c.ConnectAsync(Host, Port, Password, CancellationToken.None))
+            .Awaiting(c => c.ConnectAsync(CancellationToken.None))
             .Should()
             .NotThrowAsync();
     }
@@ -34,10 +38,11 @@ public sealed class RconClientTests
     [Fact]
     public async Task Login_With_Wrong_Password_Throws()
     {
-        await _client
-            .Awaiting(c => c.ConnectAsync(Host, Port, "this ain't right", CancellationToken.None))
-            .Should()
-            .ThrowAsync<ArgumentException>();
+        var client = new RconClient(_fakeRconServer, () => { },
+            new RconOptions { Hostname = Host, Port = Port, Password = "This ain't right" });
+        var result = await client.ConnectAsync(CancellationToken.None);
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().BeOfType<ArgumentInvalidError>();
     }
 
     [Fact]
@@ -53,30 +58,37 @@ public sealed class RconClientTests
     public async Task Send_Command_Joins_Long_Replies()
     {
         const int maxPayloadSize = 4096;
-        var connection = new Mock<IRconConnection>();
-        var client = new RconClient(connection.Object);
-        connection.SetupSequence(c => c.ReceiveAsync(It.IsAny<CancellationToken>()).Result)
+        var transport = new Mock<ITcpPacketTransport>();
+        var client = new RconClient(transport.Object, () => { },
+            new RconOptions { Hostname = "foo", Port = 123, Password = "bar" });
+        transport.SetupSequence(c =>
+                c.ReceiveAsync(It.IsAny<PacketReader<RconPacket>>(), It.IsAny<CancellationToken>()).Result)
             .Returns(new RconPacket
             {
-                Id = client.NextId, Type = RconPacketType.Response, Payload = new string('a', maxPayloadSize),
+                Id = client.NextId, Type = RconPacketType.Response, Payload = "Logged in",
             })
             .Returns(new RconPacket
             {
-                Id = client.NextId, Type = RconPacketType.Response, Payload = new string('a', maxPayloadSize),
+                Id = client.NextId + 1, Type = RconPacketType.Response, Payload = new string('a', maxPayloadSize),
             })
             .Returns(new RconPacket
             {
-                Id = client.NextId, Type = RconPacketType.Response, Payload = new string('a', maxPayloadSize),
+                Id = client.NextId + 1, Type = RconPacketType.Response, Payload = new string('a', maxPayloadSize),
             })
             .Returns(new RconPacket
             {
-                Id = client.NextId, Type = RconPacketType.Response, Payload = new string('a', 12),
+                Id = client.NextId + 1, Type = RconPacketType.Response, Payload = new string('a', maxPayloadSize),
             })
-            .Returns(new RconPacket { Id = client.NextId + 1, Type = RconPacketType.Response, Payload = "", })
+            .Returns(new RconPacket
+            {
+                Id = client.NextId + 1, Type = RconPacketType.Response, Payload = new string('a', 12),
+            })
+            .Returns(new RconPacket { Id = client.NextId + 2, Type = RconPacketType.Response, Payload = "", })
             .Throws(new InvalidOperationException("Called Receive too many times!"));
-        connection.Setup(c => c.IsConnected).Returns(true);
 
+        await client.ConnectAsync(CancellationToken.None);
         var reply = await client.SendCommandAsync("test", CancellationToken.None);
-        reply.Should().HaveLength(3 * 4096 + 12);
+        reply.IsSuccess.Should().BeTrue();
+        reply.Entity.Should().HaveLength(3 * 4096 + 12);
     }
 }

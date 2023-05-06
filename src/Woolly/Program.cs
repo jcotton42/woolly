@@ -36,7 +36,7 @@ try
                 options.UseNpgsql(builder.Configuration.GetConnectionString(nameof(WoollyContext))));
             services.AddScoped<WoollyRequestContext>();
             services.AddScoped<ServerListPingClientFactory>();
-            services.AddScoped<ServerListPingTransport>();
+            services.AddScoped<ITcpPacketTransport, TcpPacketTransport>();
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>()
                 .AddOpenBehavior(typeof(RequestIdLoggingBehavior<,>))
                 .AddOpenBehavior(typeof(CommandNameLoggingBehavior<,>)));

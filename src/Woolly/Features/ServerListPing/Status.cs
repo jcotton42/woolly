@@ -30,7 +30,11 @@ public sealed partial class ServerListPingCommands
         var embed = new EmbedBuilder()
             .WithTitle($"{server} ({status.Version.Name})")
             .WithDescription(status.Description.Text!)
-            .WithThumbnailUrl(status.Favicon!)
+            // TODO just passing the data URL doesn't work, an attachment will need to be added
+            // see the below, using Velvet's Remora.Discord.Builders
+            // var message = new MessageBuilder().AddAttachment(myFileStream, "my_image.png").AddEmbed(
+            //        new Embed { Image = new EmbedImage("attachment://my_image.png") } );
+            //.WithThumbnailUrl(status.Favicon!)
             .AddField(playerField).Entity
             .Build().Entity;
 
