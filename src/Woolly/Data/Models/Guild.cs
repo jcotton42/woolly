@@ -6,4 +6,5 @@ public sealed class Guild
 {
     public required Snowflake Id { get; init; }
     public required string Name { get; set; }
+    public Snowflake? MinecraftRoleId { get; set; }
 }

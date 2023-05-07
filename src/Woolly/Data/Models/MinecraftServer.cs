@@ -5,7 +5,6 @@ using Remora.Rest.Core;
 
 namespace Woolly.Data.Models;
 
-[EntityTypeConfiguration(typeof(Configuration))]
 public sealed class MinecraftServer
 {
     public int Id { get; init; }
@@ -15,6 +14,8 @@ public sealed class MinecraftServer
     public required ushort RconPort { get; set; }
     public required string RconPassword { get; set; }
     public required ushort PingPort { get; set; }
+
+    public List<MinecraftPlayer> Players { get; } = new();
 
     public sealed class Configuration : IEntityTypeConfiguration<MinecraftServer>
     {

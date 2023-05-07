@@ -11,6 +11,7 @@ namespace Woolly.Data;
 public sealed class WoollyContext : DbContext
 {
     public DbSet<Guild> Guilds => Set<Guild>();
+    public DbSet<MinecraftPlayer> MinecraftPlayers => Set<MinecraftPlayer>();
     public DbSet<MinecraftServer> MinecraftServers => Set<MinecraftServer>();
 
     public WoollyContext(DbContextOptions<WoollyContext> options) : base(options) { }
@@ -27,5 +28,10 @@ public sealed class WoollyContext : DbContext
         optionsBuilder
             .UseExceptionProcessor()
             .UseSnakeCaseNamingConvention();
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(WoollyContext).Assembly);
     }
 }
