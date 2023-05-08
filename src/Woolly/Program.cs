@@ -73,8 +73,7 @@ void AddDiscordServices(IServiceCollection services)
 
     services
         .AddDiscordService(services => services.GetRequiredService<IOptions<DiscordOptions>>().Value.Token)
-        .Configure<DiscordGatewayClientOptions>(g =>
-            g.Intents = GatewayIntents.Guilds | GatewayIntents.GuildBans | GatewayIntents.GuildMembers)
+        .Configure<DiscordGatewayClientOptions>(g => g.Intents = GatewayIntents.Guilds | GatewayIntents.GuildMembers)
         .AddDiscordCommands(enableSlash: true)
         .AddRespondersFromAssembly(typeof(Program).Assembly)
         .AddCommandGroupsFromAssembly(typeof(Program).Assembly)
