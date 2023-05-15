@@ -1,4 +1,4 @@
-using FluentValidation;
+using MediatR.NotificationPublishers;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -31,16 +31,16 @@ try
     IHost host = Host.CreateDefaultBuilder(args)
         .ConfigureServices((builder, services) =>
         {
-            services.AddStartup();
-            services.AddDbContext<WoollyContext>(options =>
-                options.UseNpgsql(builder.Configuration.GetConnectionString(nameof(WoollyContext))));
-            services.AddScoped<WoollyRequestContext>();
-            services.AddScoped<ServerListPingClientFactory>();
-            services.AddScoped<ITcpPacketTransport, TcpPacketTransport>();
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>()
-                .AddOpenBehavior(typeof(RequestIdLoggingBehavior<,>))
-                .AddOpenBehavior(typeof(CommandNameLoggingBehavior<,>)));
+            AddWoollyServices(builder, services);
             AddDiscordServices(services);
+            services.AddMediatR(cfg =>
+            {
+                cfg
+                    .RegisterServicesFromAssemblyContaining<Program>()
+                    .AddOpenBehavior(typeof(RequestIdLoggingBehavior<,>))
+                    .AddOpenBehavior(typeof(CommandNameLoggingBehavior<,>));
+                cfg.NotificationPublisher = new ForeachAwaitPublisher();
+            });
         })
         .UseSerilog((context, loggerConfig) => loggerConfig
             .ReadFrom.Configuration(context.Configuration)
@@ -63,29 +63,41 @@ finally
     Log.CloseAndFlush();
 }
 
+void AddWoollyServices(HostBuilderContext builder, IServiceCollection services)
+{
+    services.AddHostedService<Startup>();
+    services.AddDbContext<WoollyContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString(nameof(WoollyContext))));
+    services.AddScoped<WoollyRequestContext>();
+    services.AddScoped<ServerListPingClientFactory>();
+    services.AddScoped<ITcpPacketTransport, TcpPacketTransport>();
+}
+
 void AddDiscordServices(IServiceCollection services)
 {
     services
-        .AddSingleton<IValidateOptions<DiscordOptions>, DiscordOptions.Validator>()
-        .AddOptions<DiscordOptions>()
-        .BindConfiguration(DiscordOptions.SectionName)
-        .ValidateOnStart();
+        .AddValidatedOptions<DiscordOptions, DiscordOptions.Validator>(DiscordOptions.SectionName);
 
     services
         .AddDiscordService(services => services.GetRequiredService<IOptions<DiscordOptions>>().Value.Token)
-        .Configure<DiscordGatewayClientOptions>(g => g.Intents = GatewayIntents.Guilds | GatewayIntents.GuildMembers)
+        .Configure<DiscordGatewayClientOptions>(g => g.Intents = GatewayIntents.Guilds | GatewayIntents.GuildMembers);
+
+    services
         .AddDiscordCommands(enableSlash: true)
         .AddRespondersFromAssembly(typeof(Program).Assembly)
         .AddCommandGroupsFromAssembly(typeof(Program).Assembly)
         .AddPostExecutionEvent<PostCommandExecutionHandler>()
-        .AddInteractivity()
-        .AddInteractionGroupsFromAssembly(typeof(Program).Assembly)
         .AddAutocompleteProvider<MinecraftServerNameAutocompleter>();
+
+    services
+        .AddInteractivity()
+        .AddInteractionGroupsFromAssembly(typeof(Program).Assembly);
 }
 
 // https://medium.com/@floyd.may/ef-core-app-migrate-on-startup-d046afdba258
 // https://gist.github.com/Tim-Hodge/eea0601a14177c199fe60557eeeff31e
-static void Migrate<TContext>(IHost host) where TContext : DbContext {
+void Migrate<TContext>(IHost host) where TContext : DbContext
+{
     using var scope = host.Services.GetRequiredService<IServiceScopeFactory>().CreateScope();
     using var ctx = scope.ServiceProvider.GetRequiredService<TContext>();
 
@@ -104,8 +116,10 @@ static void Migrate<TContext>(IHost host) where TContext : DbContext {
         sourceModel.GetRelationalModel(),
         readOptimizedModel.GetRelationalModel());
 
-    if(diffsExist) {
-        throw new InvalidOperationException("There are differences between the current database model and the most recent migration.");
+    if (diffsExist)
+    {
+        throw new InvalidOperationException(
+            "There are differences between the current database model and the most recent migration.");
     }
 
     ctx.Database.Migrate();

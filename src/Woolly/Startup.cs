@@ -48,9 +48,3 @@ public sealed partial class Startup : BackgroundService
         Message = "Failed to update Discord commands, aborting. Cause: {Message}")]
     private partial void CommandUpdateFailed(string message);
 }
-
-public static class StartupServiceCollectionExtensions
-{
-    public static IServiceCollection AddStartup(this IServiceCollection services)
-        => services.AddHostedService<Startup>();
-}

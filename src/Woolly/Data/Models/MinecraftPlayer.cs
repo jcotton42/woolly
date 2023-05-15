@@ -22,6 +22,9 @@ public sealed class MinecraftPlayer
             builder
                 .HasIndex(mp => new { mp.GuildId, mp.MinecraftUuid })
                 .IsUnique();
+            builder
+                .HasIndex(mp => new { mp.GuildId, mp.DiscordUserId })
+                .IsUnique();
         }
     }
 }

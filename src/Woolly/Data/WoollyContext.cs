@@ -13,6 +13,7 @@ public sealed class WoollyContext : DbContext
     public DbSet<Guild> Guilds => Set<Guild>();
     public DbSet<MinecraftPlayer> MinecraftPlayers => Set<MinecraftPlayer>();
     public DbSet<MinecraftServer> MinecraftServers => Set<MinecraftServer>();
+    public DbSet<State> States => Set<State>();
 
     public WoollyContext(DbContextOptions<WoollyContext> options) : base(options) { }
 

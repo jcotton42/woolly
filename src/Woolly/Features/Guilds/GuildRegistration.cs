@@ -10,14 +10,14 @@ using Remora.Results;
 using Woolly.Data;
 using Woolly.Data.Models;
 
-namespace Woolly.Features;
+namespace Woolly.Features.Guilds;
 
 public sealed class GuildEvents : IResponder<IGuildCreate>, IResponder<IGuildDelete>, IResponder<IGuildUpdate>
 {
     private readonly IMediator _mediator;
 
     public GuildEvents(IMediator mediator) => _mediator = mediator;
-    // TODO handle leave/kick/ban to remove players from the whitelist
+
     public async Task<Result> RespondAsync(IGuildCreate gatewayEvent, CancellationToken ct)
     {
         if (gatewayEvent.Guild.Value is IGuildCreate.IAvailableGuild guild)

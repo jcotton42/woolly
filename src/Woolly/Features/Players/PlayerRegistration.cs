@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Polly;
 
 using Remora.Discord.API.Abstractions.Gateway.Events;
+using Remora.Discord.API.Abstractions.Rest;
 using Remora.Discord.Gateway.Responders;
 using Remora.Rest.Core;
 using Remora.Results;
@@ -46,6 +47,9 @@ public sealed class RemovePlayerCommandHandler : IRequestHandler<RemovePlayerCom
             .Where(mp => mp.GuildId == request.GuildId && mp.DiscordUserId == request.UserId)
             .ToListAsync(ct);
 
+        // ******************************************************************
+        // TODO members are now restricted to one Minecraft profile per guild
+        // ******************************************************************
         foreach (var profile in profiles)
         {
             var username = profile.MinecraftUsername;
