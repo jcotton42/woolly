@@ -168,6 +168,10 @@ public sealed class RconClient : IDisposable
         .Map(output => output.StartsWith("made", StringComparison.OrdinalIgnoreCase)
                        || output.StartsWith("de-opped", StringComparison.OrdinalIgnoreCase));
 
+    public async Task<Result<bool>> KickAsync(string username, string reason, CancellationToken ct) =>
+        (await SendCommandAsync($"kick {username} {reason}", ct))
+        .Map(output => output.StartsWith("kicked", StringComparison.OrdinalIgnoreCase));
+
     public async Task<Result> SayAsync(string message, CancellationToken ct) =>
         (Result)await SendCommandAsync($"say {message}", ct);
 

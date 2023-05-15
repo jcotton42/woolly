@@ -13,6 +13,8 @@
     <PackageReference Include="EntityFrameworkCore.Exceptions.PostgreSQL" Version="6.0.3" />
     <PackageReference Include="FluentValidation" Version="11.5.2" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.5.2" />
+    <PackageReference Include="Hangfire.NetCore" Version="1.8.0" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.19.12" />
     <PackageReference Include="MediatR" Version="12.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -20,15 +22,16 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.4" />
-    <PackageReference Include="Remora.Discord" Version="2023.2.0" />
+    <PackageReference Include="Polly" Version="7.2.3" />
+    <PackageReference Include="Remora.Discord" Version="2023.3.0" />
     <PackageReference Include="Remora.Results.Analyzers" Version="1.0.0" />
     <PackageReference Include="Serilog" Version="2.12.0" />
-    <PackageReference Include="Serilog.Extensions.Hosting" Version="5.0.1" />
-    <PackageReference Include="Serilog.Settings.Configuration" Version="3.4.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="7.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="5.2.2" />
     <PackageReference Include="System.IO.Pipelines" Version="7.0.0" />
     <PackageReference Include="System.Threading.RateLimiting" Version="7.0.0" />
-    <PackageReference Include="VTP.Remora.Discord.Builders" Version="1.0.0" />
+    <PackageReference Include="VTP.Remora.Discord.Builders" Version="1.0.1" />
   </ItemGroup>
 </Project>
