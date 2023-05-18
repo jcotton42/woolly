@@ -1,8 +1,12 @@
 using System.Text.Json;
 
+using EntityFramework.Exceptions.Common;
+
 using MediatR;
 
 using Microsoft.EntityFrameworkCore;
+
+using NodaTime;
 
 using Remora.Commands.Attributes;
 using Remora.Discord.API.Abstractions.Objects;
@@ -17,6 +21,7 @@ using Remora.Rest.Core;
 using Remora.Results;
 
 using Woolly.Data;
+using Woolly.Data.Models;
 using Woolly.Extensions;
 using Woolly.Features.Guilds;
 using Woolly.Infrastructure;
@@ -50,7 +55,7 @@ public sealed class AddPlayerInteractions : InteractionGroup
 
         if (update.Error is not UsernameNotAvailableError) return update;
 
-        var state = await _state.AddAsync(JsonSerializer.Serialize(values), CancellationToken);
+        var state = await _state.AddAsync(JsonSerializer.Serialize(values), Duration.FromMinutes(5), CancellationToken);
         var modal = new ModalBuilder(Title: "Minecraft username")
             .WithCustomID(CustomIDHelpers.CreateModalIDWithState("minecraft-username", state.ToString(), "add-player"))
             .AddForm(new TextInputBuilder(Style: TextInputStyle.Short)
@@ -68,7 +73,8 @@ public sealed class AddPlayerInteractions : InteractionGroup
     [Modal("minecraft-username")]
     public async Task<IResult> OnUsernameSubmitted(string username, string state)
     {
-        var data = await _state.TakeAsync(int.Parse(state), CancellationToken);
+        var getData = await _state.TryTakeAsync(int.Parse(state), CancellationToken);
+        if (!getData.IsDefined(out var data)) return getData;
         var serverNames = JsonSerializer.Deserialize<List<string>>(data)!;
 
         var setUsername = await _mediator.Send(new SetPlayerMinecraftUsernameCommand(
@@ -103,10 +109,74 @@ public sealed record UpdatePlayerServersCommand(
     Snowflake UserId,
     IReadOnlyList<string> ServerNames) : IRequest<Result>;
 
+public sealed class UpdatePlayerServersCommandHandler : IRequestHandler<UpdatePlayerServersCommand, Result>
+{
+    private readonly WoollyContext _db;
+
+    public async Task<Result> Handle(UpdatePlayerServersCommand request, CancellationToken ct)
+    {
+        var player = await _db.MinecraftPlayers
+            .Include(mp => mp.Servers)
+            .FirstOrDefaultAsync(mp => mp.GuildId == request.GuildId && mp.DiscordUserId == request.UserId, ct);
+
+        if (player is null) return new NotFoundError();
+
+        var servers = await _db.MinecraftServers
+            .Where(ms => ms.GuildId == request.GuildId && request.ServerNames.Contains(ms.Name))
+            .ToListAsync(ct);
+    }
+}
+
 public sealed record SetPlayerMinecraftUsernameCommand(
     Snowflake GuildId,
     Snowflake DiscordUserId,
     string MinecraftUsername) : IRequest<Result>;
+
+public sealed class SetPlayerMinecraftUsernameCommandHandler : IRequestHandler<SetPlayerMinecraftUsernameCommand, Result>
+{
+    private readonly WoollyContext _db;
+    private readonly ILogger<SetPlayerMinecraftUsernameCommandHandler> _logger;
+    private readonly MojangApi _mojangApi;
+
+    public async Task<Result> Handle(SetPlayerMinecraftUsernameCommand request, CancellationToken ct)
+    {
+        var getProfile = await _mojangApi.GetProfileFromUsernameAsync(request.MinecraftUsername, ct);
+        if (!getProfile.IsDefined(out var profile)) return (Result)getProfile;
+
+        var player = await _db.MinecraftPlayers
+            .FirstOrDefaultAsync(mp => mp.GuildId == request.GuildId && mp.DiscordUserId == request.DiscordUserId, ct);
+
+        if (player is null)
+        {
+            player = new MinecraftPlayer
+            {
+                GuildId = request.GuildId,
+                DiscordUserId = request.DiscordUserId,
+                MinecraftUsername = profile.Username,
+                MinecraftUuid = profile.Uuid,
+            };
+            _db.MinecraftPlayers.Add(player);
+        }
+        else
+        {
+            player.MinecraftUsername = profile.Username;
+            player.MinecraftUuid = profile.Uuid;
+        }
+
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (UniqueConstraintException uce)
+        {
+            // TODO allow admins to override this
+            // TODO say who it's assigned to, the Entries on UniqueConstraintException may have the info
+            return new InvalidOperationError("That Minecraft account is already assigned to someone else.");
+        }
+
+        return Result.FromSuccess();
+    }
+}
 
 public sealed class MovePlayerJoinMessage : INotificationHandler<GuildConfigurationUpdated>
 {

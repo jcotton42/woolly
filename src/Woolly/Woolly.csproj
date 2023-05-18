@@ -21,7 +21,9 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+    <PackageReference Include="NodaTime" Version="3.1.9" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.4" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime" Version="7.0.4" />
     <PackageReference Include="Polly" Version="7.2.3" />
     <PackageReference Include="Remora.Discord" Version="2023.3.0" />
     <PackageReference Include="Remora.Results.Analyzers" Version="1.0.0" />

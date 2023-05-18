@@ -8,7 +8,7 @@ namespace Woolly.Data.Models;
 public sealed class Guild
 {
     public required Snowflake Id { get; init; }
-    public uint Version { get; set; }
+    public uint RowVersion { get; set; }
     public required string Name { get; set; }
     public Snowflake? MinecraftRoleId { get; set; }
     public Snowflake? JoinChannelId { get; set; }
@@ -23,7 +23,7 @@ public sealed class Guild
         public void Configure(EntityTypeBuilder<Guild> builder)
         {
             builder
-                .Property(g => g.Version)
+                .Property(g => g.RowVersion)
                 .IsRowVersion();
         }
     }

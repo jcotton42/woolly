@@ -27,6 +27,7 @@ public sealed class WoollyContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder
+            .UseNpgsql(o => o.UseNodaTime())
             .UseExceptionProcessor()
             .UseSnakeCaseNamingConvention();
     }

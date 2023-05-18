@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 
+using NodaTime;
+
+using Remora.Results;
+
 using Woolly.Data;
 using Woolly.Data.Models;
 
@@ -10,21 +14,32 @@ namespace Woolly.Infrastructure;
 /// </summary>
 public sealed class StateService
 {
+    private readonly IClock _clock;
     private readonly WoollyContext _db;
 
-    public StateService(WoollyContext db) => _db = db;
-
-    public async Task<int> AddAsync(string data, CancellationToken ct)
+    public StateService(IClock clock, WoollyContext db)
     {
-        var state = new State { Data = data };
+        _clock = clock;
+        _db = db;
+    }
+
+    public async Task<int> AddAsync(string data, Duration lifetime, CancellationToken ct)
+    {
+        if (lifetime <= Duration.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lifetime), "Lifetime must be greater than zero.");
+        }
+
+        var state = new State { Data = data, ExpiryTime = _clock.GetCurrentInstant() + lifetime };
         _db.States.Add(state);
         await _db.SaveChangesAsync(ct);
         return state.Id;
     }
 
-    public async Task<string> TakeAsync(int id, CancellationToken ct)
+    public async Task<Result<string>> TryTakeAsync(int id, CancellationToken ct)
     {
-        var state = await _db.States.FirstAsync(s => s.Id == id, ct);
+        var state = await _db.States.FirstOrDefaultAsync(s => s.Id == id, ct);
+        if (state is null) return new NotFoundError();
         var data = state.Data;
         _db.States.Remove(state);
         await _db.SaveChangesAsync(ct);
