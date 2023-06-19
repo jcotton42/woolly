@@ -22,6 +22,11 @@ public sealed class WoollyContext : DbContext
             .HaveConversion<DiscordSnowflakeConverter>();
     }
 
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(WoollyContext).Assembly);
+    }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder

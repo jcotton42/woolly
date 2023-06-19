@@ -5,7 +5,6 @@ using Remora.Rest.Core;
 
 namespace Woolly.Data.Models;
 
-[EntityTypeConfiguration(typeof(Configuration))]
 public sealed class MinecraftServer
 {
     public int Id { get; init; }

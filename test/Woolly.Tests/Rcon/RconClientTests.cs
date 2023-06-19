@@ -22,8 +22,7 @@ public sealed class RconClientTests
     public RconClientTests()
     {
         _fakeRconServer = new FakeRconServer(Host, Port, Password);
-        _client = new RconClient(_fakeRconServer, () => { },
-            new RconOptions { Hostname = Host, Port = Port, Password = Password });
+        _client = new RconClient(_fakeRconServer, new RconOptions { Hostname = Host, Port = Port, Password = Password });
     }
 
     [Fact]
@@ -38,7 +37,7 @@ public sealed class RconClientTests
     [Fact]
     public async Task Login_With_Wrong_Password_Throws()
     {
-        var client = new RconClient(_fakeRconServer, () => { },
+        var client = new RconClient(_fakeRconServer,
             new RconOptions { Hostname = Host, Port = Port, Password = "This ain't right" });
         var result = await client.ConnectAsync(CancellationToken.None);
         result.IsSuccess.Should().BeFalse();
@@ -59,7 +58,7 @@ public sealed class RconClientTests
     {
         const int maxPayloadSize = 4096;
         var transport = new Mock<ITcpPacketTransport>();
-        var client = new RconClient(transport.Object, () => { },
+        var client = new RconClient(transport.Object,
             new RconOptions { Hostname = "foo", Port = 123, Password = "bar" });
         transport.SetupSequence(c =>
                 c.ReceiveAsync(It.IsAny<PacketReader<RconPacket>>(), It.IsAny<CancellationToken>()).Result)

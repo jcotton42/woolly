@@ -26,8 +26,8 @@ public readonly struct RconPacket
         if (!reader.TryReadLittleEndian(out int remaining)) return false;
         if (reader.Remaining < remaining) return false;
         // we now know the sequence has the whole packet, so no need to check these Trys
-        reader.TryReadLittleEndian(out int id);
-        reader.TryReadLittleEndian(out int type);
+        _ = reader.TryReadLittleEndian(out int id);
+        _ = reader.TryReadLittleEndian(out int type);
         // from https://wiki.vg/RCON
         // Note on ASCII text: Some servers reply with color codes prefixed by a section sign in their replies
         // (for example Craftbukkit for Minecraft 1.4.7).

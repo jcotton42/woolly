@@ -11,86 +11,42 @@ using Woolly.Infrastructure;
 
 namespace Woolly.Features.Rcon;
 
-// TODO, get this reviewed
-public sealed class RconClientFactory : IDisposable
+public sealed class RconClientFactory
 {
     private readonly WoollyContext _db;
-    private readonly SemaphoreSlim _semaphore;
     private readonly IServiceProvider _serviceProvider;
-    // TODO, case insensitivity on the name part of the key?
-    private readonly Dictionary<(Snowflake GuildId, string Name), RconClient> _clients;
 
     public RconClientFactory(WoollyContext db, IServiceProvider serviceProvider)
     {
         _db = db;
         _serviceProvider = serviceProvider;
-
-        _semaphore = new SemaphoreSlim(1, 1);
-        _clients = new Dictionary<(Snowflake GuildId, string Name), RconClient>();
     }
 
     public async Task<Result<RconClient>> GetClientAsync(Snowflake guildId, string name, CancellationToken ct)
     {
-        await _semaphore.WaitAsync(ct);
-        try
+        var server = await _db.MinecraftServers.FirstOrDefaultAsync(s => s.GuildId == guildId || s.Name == name, ct);
+        if (server is null)
         {
-            if (_clients.TryGetValue((guildId, name), out var client)) return client;
-            var server =
-                await _db.MinecraftServers.FirstOrDefaultAsync(s => s.GuildId == guildId || s.Name == name, ct);
-            if (server is null)
-            {
-                return new NotFoundError($"No Minecraft server named `{name}` is registered in this guild.");
-            }
-
-            var options = new RconOptions
-            {
-                Hostname = server.Host, Port = server.RconPort, Password = server.RconPassword,
-            };
-
-            client = ActivatorUtilities.CreateInstance<RconClient>(
-                _serviceProvider,
-                () => InvalidateClient(guildId, name),
-                options);
-
-            var connect = await client.ConnectAsync(ct);
-            if (!connect.IsSuccess)
-            {
-                client.Dispose();
-                return Result<RconClient>.FromError(connect);
-            }
-
-            _clients.Add((guildId, name), client);
-            return client;
+            return new NotFoundError($"No Minecraft server named `{name}` is registered in this guild.");
         }
-        finally
+
+        var options = new RconOptions
         {
-            _semaphore.Release();
-        }
-    }
+            Hostname = server.Host,
+            Port = server.RconPort,
+            Password = server.RconPassword,
+        };
 
-    private void InvalidateClient(Snowflake guildId, string name)
-    {
-        _semaphore.Wait();
-        try
-        {
-            if (_clients.Remove((guildId, name), out var client))
-            {
-                // TODO this feels like a terrible idea, what if someone else is using it atm?
-                client.Dispose();
-            }
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
-    }
+        var client = ActivatorUtilities.CreateInstance<RconClient>(_serviceProvider, options);
 
-    public void Dispose()
-    {
-        foreach (var client in _clients.Values)
+        var connect = await client.ConnectAsync(ct);
+        if (!connect.IsSuccess)
         {
             client.Dispose();
+            return Result<RconClient>.FromError(connect);
         }
+
+        return client;
     }
 }
 
@@ -98,9 +54,7 @@ public sealed class RconClient : IDisposable
 {
     private static readonly string[] WhitelistSplits = {":", ", ", " and "};
 
-    private readonly SemaphoreSlim _semaphore;
     private readonly ITcpPacketTransport _transport;
-    private readonly Action _invalidate;
     private readonly RconOptions _options;
 
     private bool _isConnected;
@@ -108,38 +62,32 @@ public sealed class RconClient : IDisposable
 
     internal int NextId = 1;
 
-    public RconClient(ITcpPacketTransport transport, Action invalidate, RconOptions options)
+    public RconClient(ITcpPacketTransport transport, RconOptions options)
     {
-        _semaphore = new SemaphoreSlim(1, 1);
         _transport = transport;
-        _invalidate = invalidate;
         _options = options;
     }
 
     internal async Task<Result> ConnectAsync(CancellationToken ct)
     {
-        await _semaphore.WaitAsync(ct);
-        try
+        await _transport.ConnectAsync(_options.Hostname, _options.Port, ct);
+        var loginPacket = new RconPacket
         {
-            await _transport.ConnectAsync(_options.Hostname, _options.Port, ct);
-            var loginPacket =
-                new RconPacket { Id = NextId++, Type = RconPacketType.Login, Payload = _options.Password, };
-            await _transport.SendAsync(loginPacket, WritePacket, ct);
-            var loginReplyResult = await _transport.ReceiveAsync<RconPacket>(TryReadPacket, ct);
-            if (!loginReplyResult.IsDefined(out var loginReply)) return (Result)loginReplyResult;
+            Id = NextId++,
+            Type = RconPacketType.Login,
+            Payload = _options.Password,
+        };
+        await _transport.SendAsync(loginPacket, WritePacket, ct);
+        var loginReplyResult = await _transport.ReceiveAsync<RconPacket>(TryReadPacket, ct);
+        if (!loginReplyResult.IsDefined(out var loginReply)) return (Result)loginReplyResult;
 
-            if (loginPacket.Id != loginReply.Id)
-            {
-                return new ArgumentInvalidError(nameof(_options.Password), "Invalid password.");
-            }
-
-            _isConnected = true;
-            return Result.FromSuccess();
-        }
-        finally
+        if (loginPacket.Id != loginReply.Id)
         {
-            _semaphore.Release();
+            return new ArgumentInvalidError(nameof(_options.Password), "Invalid password.");
         }
+
+        _isConnected = true;
+        return Result.FromSuccess();
     }
 
     public async Task<Result<bool>> AddToWhitelistAsync(string username, CancellationToken ct) =>
@@ -174,48 +122,49 @@ public sealed class RconClient : IDisposable
     public async Task<Result<string>> SendCommandAsync(string command, CancellationToken ct)
     {
         AssertConnected();
-        await _semaphore.WaitAsync(ct);
-        try
+        // Responses from an RCON server can be fragmented across multiple packets, but there's no standard end of
+        // response flag. So send an "end" packet with a different ID, which will let us know when we've finished
+        // the reply.
+        var commandPacketId = NextId++;
+        var endPacketId = NextId++;
+        var commandPacket = new RconPacket
         {
-            // Responses from an RCON server can be fragmented across multiple packets, but there's no standard end of
-            // response flag. So send an "end" packet with a different ID, which will let us know when we've finished
-            // the reply.
-            var commandPacketId = NextId++;
-            var endPacketId = NextId++;
-            var commandPacket =
-                new RconPacket { Id = commandPacketId, Type = RconPacketType.Command, Payload = command };
-            var endPacket = new RconPacket { Id = endPacketId, Type = RconPacketType.Command, Payload = "" };
+            Id = commandPacketId,
+            Type = RconPacketType.Command,
+            Payload = command,
+        };
+        var endPacket = new RconPacket
+        {
+            Id = endPacketId,
+            Type = RconPacketType.Command,
+            Payload = "",
+        };
 
-            await _transport.SendAsync(commandPacket, WritePacket, ct);
-            await _transport.SendAsync(endPacket, WritePacket, ct);
-            var output = new StringBuilder();
+        await _transport.SendAsync(commandPacket, WritePacket, ct);
+        await _transport.SendAsync(endPacket, WritePacket, ct);
+        var output = new StringBuilder();
 
-            while (true)
+        while (true)
+        {
+            switch (await _transport.ReceiveAsync<RconPacket>(TryReadPacket, ct))
             {
-                switch (await _transport.ReceiveAsync<RconPacket>(TryReadPacket, ct))
-                {
-                    case { IsSuccess: false } result:
-                        _invalidate();
-                        return Result<string>.FromError(result);
-                    case { Entity.Id: < 0 }:
-                        throw new InvalidOperationException("Send called before login");
-                    case { Entity.Id: var id } when id == endPacketId:
-                        goto end;
-                    case { Entity: { Id: var id, Payload: var chunk } } when id == commandPacketId:
-                        output.Append(chunk);
-                        break;
-                    default:
-                        throw new InvalidOperationException("Unexpected response ID");
-                }
+                case { IsSuccess: false } result:
+                    return Result<string>.FromError(result);
+                case { Entity.Id: < 0 }:
+                    throw new InvalidOperationException("Send called before login");
+                case { Entity.Id: var id } when id == endPacketId:
+                    goto end;
+                case { Entity: { Id: var id, Payload: var chunk } } when id == commandPacketId:
+                    output.Append(chunk);
+                    break;
+                default:
+                    throw new InvalidOperationException("Unexpected response ID");
             }
-            end:
+        }
 
-            return output.ToString();
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
+        end:
+
+        return output.ToString();
     }
 
     private static bool TryReadPacket(ref ReadOnlySequence<byte> buffer, out RconPacket packet) =>
@@ -233,6 +182,5 @@ public sealed class RconClient : IDisposable
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 1) return;
         _transport.Dispose();
-        _semaphore.Dispose();
     }
 }
