@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Remora.Commands.Attributes;
 using Remora.Commands.Groups;
 using Remora.Discord.API.Abstractions.Objects;
+using Remora.Discord.Commands.Attributes;
 using Remora.Discord.Commands.Conditions;
 using Remora.Discord.Commands.Contexts;
 using Remora.Discord.Commands.Feedback.Services;
@@ -58,7 +59,7 @@ public sealed class ConfigurationCommands : CommandGroup
 public sealed record GuildConfiguration(Snowflake GuildId, Snowflake? JoinChannelId, Snowflake? JoinMessageId, Snowflake? AdminChannelId)
 {
     public static GuildConfiguration FromGuildEntity(Guild guild) =>
-        new GuildConfiguration(guild.Id, guild.JoinChannelId, guild.JoinMessageId, guild.AdminChannelId);
+        new(guild.Id, guild.JoinChannelId, guild.JoinMessageId, guild.AdminChannelId);
 }
 
 public sealed record UpdateGuildConfigurationCommand(GuildConfiguration Patch) : IRequest<Result>;

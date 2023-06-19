@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Options;
 
+using Npgsql;
+
 using Remora.Discord.API.Abstractions.Gateway.Commands;
 using Remora.Discord.Commands.Extensions;
 using Remora.Discord.Extensions.Extensions;
@@ -123,4 +125,8 @@ void Migrate<TContext>(IHost host) where TContext : DbContext
     }
 
     ctx.Database.Migrate();
+
+    using var conn = (NpgsqlConnection)ctx.Database.GetDbConnection();
+    conn.Open();
+    conn.ReloadTypes();
 }

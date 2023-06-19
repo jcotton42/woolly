@@ -9,6 +9,8 @@ namespace Woolly.Infrastructure;
 
 public sealed class MojangApi : IDisposable
 {
+    private const string RateLimitErrorMessage =
+        "Profile lookup by username is currently rate-limited. Please try again in a few minutes.";
     // TODO rate limiting
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly RateLimiter _usernameToProfileRateLimiter;
@@ -44,45 +46,53 @@ public sealed class MojangApi : IDisposable
         using var lease = await _usernameToProfileRateLimiter.AcquireAsync(1, ct);
         if (!lease.IsAcquired)
         {
-            return new RateLimitError(
-                "Profile lookup by username is currently rate-limited. Please try again in a few minutes.");
+            return new RateLimitError(RateLimitErrorMessage);
         }
 
         using var client = _httpClientFactory.CreateClient();
 
         var response = await client.GetAsync($"https://api.mojang.com/users/profiles/minecraft/{username}", ct);
-        if (response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.NotFound)
+        switch (response.StatusCode)
         {
-            return new NotFoundError($"No Minecraft player named `{username}` exists.");
+            case HttpStatusCode.NoContent or HttpStatusCode.NotFound:
+                return new NotFoundError($"No Minecraft player named {username} exists.");
+            case HttpStatusCode.TooManyRequests:
+                return new RateLimitError(RateLimitErrorMessage);
         }
         response.EnsureSuccessStatusCode();
-
         return (await response.Content.ReadFromJsonAsync<MinecraftProfile>(cancellationToken: ct))!;
     }
 
-    public async Task<Result<List<MinecraftProfile>>> GetProfilesFromUsernamesAsync(ICollection<string> usernames,
+    public async Task<Result<Dictionary<string, Result<MinecraftProfile>>>> GetProfilesFromUsernamesAsync(
+        ICollection<string> usernames,
         CancellationToken ct)
     {
         const int chunkSize = 10;
 
         using var lease =
-            await _usernameToProfileRateLimiter.AcquireAsync((int)Math.Ceiling(usernames.Count * 1.0 / chunkSize), ct);
+            _usernameToProfileRateLimiter.AttemptAcquire((int)Math.Ceiling(usernames.Count * 1.0 / chunkSize));
         if (!lease.IsAcquired)
         {
-            return new RateLimitError(
-                "Profile lookup by username is currently rate-limited. Please try again in a few minutes.");
+            return new RateLimitError(RateLimitErrorMessage);
         }
 
         using var client = _httpClientFactory.CreateClient();
-        var profiles = new List<MinecraftProfile>();
+        var profiles = new Dictionary<string, Result<MinecraftProfile>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var username in usernames)
+        {
+            profiles[username] = new NotFoundError($"No Minecraft player named {username} exists.");
+        }
 
         foreach (var chunk in usernames.Chunk(chunkSize))
         {
             var response = await client.PostAsJsonAsync("https://api.mojang.com/profiles/minecraft", chunk, ct);
             response.EnsureSuccessStatusCode();
 
-            profiles.AddRange(
-                (await response.Content.ReadFromJsonAsync<List<MinecraftProfile>>(cancellationToken: ct))!);
+            var responseList = await response.Content.ReadFromJsonAsync<List<MinecraftProfile>>(cancellationToken: ct);
+            foreach (var profile in responseList!)
+            {
+                profiles[profile.Username] = profile;
+            }
         }
 
         return profiles;

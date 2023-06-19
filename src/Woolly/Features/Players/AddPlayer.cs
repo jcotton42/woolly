@@ -6,13 +6,13 @@ using MediatR;
 
 using Microsoft.EntityFrameworkCore;
 
-using NodaTime;
-
 using Remora.Commands.Attributes;
+using Remora.Commands.Groups;
 using Remora.Discord.API.Abstractions.Objects;
 using Remora.Discord.API.Abstractions.Rest;
-using Remora.Discord.API.Objects;
 using Remora.Discord.Builders;
+using Remora.Discord.Commands.Attributes;
+using Remora.Discord.Commands.Conditions;
 using Remora.Discord.Commands.Contexts;
 using Remora.Discord.Commands.Feedback.Messages;
 using Remora.Discord.Commands.Feedback.Services;
@@ -28,49 +28,86 @@ using Woolly.Infrastructure;
 
 namespace Woolly.Features.Players;
 
-[Group("add-player")]
+[Group("whitelist")]
+[RequireContext(ChannelContext.Guild)]
+public sealed class WhitelistCommands : CommandGroup
+{
+    private readonly FeedbackService _feedback;
+    private readonly IDiscordRestInteractionAPI _interactionApi;
+    private readonly IInteractionContext _interactionContext;
+    private readonly IMediator _mediator;
+
+    [Command("add")]
+    public async Task<IResult> AddToWhitelist(
+        [AutocompleteProvider(MinecraftServerNameAutocompleter.Identity)]
+        string server)
+    {
+        var joinResult = await _mediator.Send(new JoinServerCommand(
+            _interactionContext.GetGuildId(),
+            _interactionContext.GetUserId(),
+            server));
+        if (joinResult.IsSuccess)
+        {
+            return await _feedback.SendContextualSuccessAsync(
+                $"You have been whitelisted on {server}.",
+                options: new FeedbackMessageOptions(MessageFlags: MessageFlags.Ephemeral),
+                ct: CancellationToken);
+        }
+
+        switch (joinResult.Error)
+        {
+            case NotFoundError:
+                return await _feedback.SendContextualErrorAsync(
+                    $"Couldn't find a configured server named {server}. Please try again.",
+                    options: new FeedbackMessageOptions(MessageFlags: MessageFlags.Ephemeral),
+                    ct: CancellationToken);
+            case UsernameNotAvailableError:
+                var modal = AddPlayerInteractions.CreateUsernameModal(
+                    "We don't know your Minecraft username, tell us so we can whitelist you.");
+                return await _interactionApi.CreateInteractionResponseAsync(
+                    _interactionContext.Interaction.ID,
+                    _interactionContext.Interaction.Token,
+                    modal,
+                    ct: CancellationToken);
+        }
+
+        return joinResult;
+    }
+}
+
+public sealed record JoinServerCommand(Snowflake GuildId, Snowflake DiscordUserId, string ServerName) : IRequest<Result>;
+
+public sealed class JoinServerCommandHandler : IRequestHandler<JoinServerCommand, Result>
+{
+    public async Task<Result> Handle(JoinServerCommand request, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+[Group(GroupName)]
 public sealed class AddPlayerInteractions : InteractionGroup
 {
+    public const string GroupName = "add-player";
+    public const string UsernameModal = "minecraft-username";
+
     private readonly FeedbackService _feedback;
     private readonly IDiscordRestInteractionAPI _interactionApi;
     private readonly IInteractionContext _interactionContext;
     private readonly IMediator _mediator;
     private readonly StateService _state;
 
-    [SelectMenu("servers")]
-    public async Task<IResult> OnServersSelected(IReadOnlyList<string> values)
+    public AddPlayerInteractions(FeedbackService feedback, IDiscordRestInteractionAPI interactionApi,
+        IInteractionContext interactionContext, IMediator mediator, StateService state)
     {
-        var update = await _mediator.Send(new UpdatePlayerServersCommand(
-            _interactionContext.GetGuildId(),
-            _interactionContext.GetUserId(),
-            values), CancellationToken);
-
-        if (update.IsSuccess)
-        {
-            return await _feedback.SendContextualSuccessAsync(
-                $"You have been added to {string.Join(", ", values)}.",
-                options: new FeedbackMessageOptions(MessageFlags: MessageFlags.Ephemeral),
-                ct: CancellationToken);
-        }
-
-        if (update.Error is not UsernameNotAvailableError) return update;
-
-        var state = await _state.AddAsync(JsonSerializer.Serialize(values), Duration.FromMinutes(5), CancellationToken);
-        var modal = new ModalBuilder(Title: "Minecraft username")
-            .WithCustomID(CustomIDHelpers.CreateModalIDWithState("minecraft-username", state.ToString(), "add-player"))
-            .AddForm(new TextInputBuilder(Style: TextInputStyle.Short)
-                .WithCustomID("username")
-                .WithLabel("We don't know your Minecraft username. Please tell us so you can be whitelisted.")
-                .IsRequired()
-                .WithPlaceholder("username"));
-
-        return await _interactionApi.CreateInteractionResponseAsync(
-            _interactionContext.Interaction.ID,
-            _interactionContext.Interaction.Token,
-            modal);
+        _feedback = feedback;
+        _interactionApi = interactionApi;
+        _interactionContext = interactionContext;
+        _mediator = mediator;
+        _state = state;
     }
 
-    [Modal("minecraft-username")]
+    [Modal(UsernameModal)]
     public async Task<IResult> OnUsernameSubmitted(string username, string state)
     {
         var getData = await _state.TryTakeAsync(int.Parse(state), CancellationToken);
@@ -82,10 +119,14 @@ public sealed class AddPlayerInteractions : InteractionGroup
             _interactionContext.GetUserId(),
             username), CancellationToken);
 
-        if (!setUsername.IsSuccess)
+        if (setUsername.Error is NotFoundError)
         {
-            // TODO handle things like the username not existing (maybe have the command return NotFoundError?)
+            return await SendUsernameModalAsync(
+                serverNames,
+                inputLabel: "We couldn't find that username. Double check your typing and try again:");
         }
+
+        if (!setUsername.IsSuccess) return setUsername;
 
         var updateServers = await _mediator.Send(new UpdatePlayerServersCommand(
             _interactionContext.GetGuildId(),
@@ -99,33 +140,25 @@ public sealed class AddPlayerInteractions : InteractionGroup
             options: new FeedbackMessageOptions(MessageFlags: MessageFlags.Ephemeral),
             ct: CancellationToken);
     }
-}
 
-public sealed record UsernameNotAvailableError(
-    string Message = "No Minecraft username is available for this user.") : ResultError(Message);
+    public static ModalBuilder CreateUsernameModal(string inputLabel)
+    {
+        return new ModalBuilder()
+            .WithTitle("Minecraft username")
+            .WithCustomID(CustomIDHelpers.CreateModalID(UsernameModal, GroupName))
+            .AddForm(new TextInputBuilder()
+                .WithStyle(TextInputStyle.Short)
+                .WithCustomID("username")
+                .WithLabel(inputLabel)
+                .IsRequired()
+                .WithPlaceholder("username"));
+    }
+}
 
 public sealed record UpdatePlayerServersCommand(
     Snowflake GuildId,
     Snowflake UserId,
     IReadOnlyList<string> ServerNames) : IRequest<Result>;
-
-public sealed class UpdatePlayerServersCommandHandler : IRequestHandler<UpdatePlayerServersCommand, Result>
-{
-    private readonly WoollyContext _db;
-
-    public async Task<Result> Handle(UpdatePlayerServersCommand request, CancellationToken ct)
-    {
-        var player = await _db.MinecraftPlayers
-            .Include(mp => mp.Servers)
-            .FirstOrDefaultAsync(mp => mp.GuildId == request.GuildId && mp.DiscordUserId == request.UserId, ct);
-
-        if (player is null) return new NotFoundError();
-
-        var servers = await _db.MinecraftServers
-            .Where(ms => ms.GuildId == request.GuildId && request.ServerNames.Contains(ms.Name))
-            .ToListAsync(ct);
-    }
-}
 
 public sealed record SetPlayerMinecraftUsernameCommand(
     Snowflake GuildId,
@@ -183,7 +216,6 @@ public sealed class MovePlayerJoinMessage : INotificationHandler<GuildConfigurat
     private readonly IDiscordRestChannelAPI _channelApi;
     private readonly WoollyContext _db;
 
-    // TODO also handle updating this when the server list is updated
     public async Task Handle(GuildConfigurationUpdated notification, CancellationToken ct)
     {
         var (oldConfig, newConfig) = notification;
@@ -199,6 +231,7 @@ public sealed class MovePlayerJoinMessage : INotificationHandler<GuildConfigurat
             if (!delete.IsSuccess)
             {
                 // TODO report error to admin channel
+                // if it's "not found" (if that can be determined), just ignore it, as an admin may have already deleted it
             }
         }
 
@@ -207,15 +240,7 @@ public sealed class MovePlayerJoinMessage : INotificationHandler<GuildConfigurat
             .Select(ms => ms.Name)
             .ToListAsync(ct);
 
-        var messageBuilder = new MessageBuilder()
-            .WithContent("Select the servers you want to join from the list below")
-            .AddComponent(new SelectBuilder()
-                .WithCustomID(CustomIDHelpers.CreateSelectMenuID("servers", "add-player"))
-                .AddOptions(serverNames.Select(name => new SelectOption(name, name)))
-                .WithMaxValues(int.MaxValue)
-                .WithPlaceholder("Minecraft servers")
-                .Build()
-            );
+        var messageBuilder = AddPlayerInteractions.BuildJoinMessage();
 
         var send = await _channelApi.CreateMessageAsync(newConfig.JoinChannelId!.Value, messageBuilder, ct: ct);
         if (!send.IsDefined(out var message))
