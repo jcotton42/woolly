@@ -1,5 +1,3 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Woolly/Woolly.csproj" />
-  </Folder>
+  <Project Path="src/Woolly/Woolly.csproj" />
 </Solution>
