@@ -3,6 +3,8 @@ services:
     build:
       context: .devcontainer
       dockerfile: Dockerfile
+    environment:
+      - SeqEndpoint=http://seq:5341
 
     volumes:
       - .:/workspace:cached
