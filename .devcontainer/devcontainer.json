@@ -1,0 +1,55 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/dotnet-postgres
+{
+    "name": "C# (.NET) and PostgreSQL",
+    "dockerComposeFile": [
+        "../docker-compose.yml",
+        "docker-compose.devcontainer.yml"
+    ],
+    "service": "app",
+    "workspaceFolder": "/workspace",
+    // Features to add to the dev container. More info: https://containers.dev/features.
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            "moby": true,
+            "azureDnsAutoDetection": true,
+            "installDockerBuildx": true,
+            "installDockerComposeSwitch": true,
+            "version": "latest",
+            "dockerDashComposeVersion": "v2"
+        }
+    },
+    // Configure tool-specific properties.
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-dotnettools.csdevkit",
+                "streetsidesoftware.code-spell-checker",
+                "github.vscode-github-actions",
+                "oderwat.indent-rainbow"
+            ]
+        }
+    },
+    // Use 'forwardPorts' to make a list of ports inside the container available locally.
+    "forwardPorts": [
+        "db:5432",
+        "rcon-web:4326",
+        "rcon-web:4327",
+        "seq:80"
+    ],
+    "portsAttributes": {
+        "db:5432": {
+            "label": "Postgres"
+        },
+        "rcon-web:4326": {
+            "label": "RCON Web UI"
+        },
+        "rcon-web:4327": {
+            "label": "RCON Web Websocket"
+        }
+    },
+    // Use 'postCreateCommand' to run commands after the container is created.
+    "postStartCommand": "dotnet restore && dotnet tool restore"
+    // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+    // "remoteUser": "root"
+}
