@@ -6,14 +6,14 @@ using Remora.Discord.Gateway.Responders;
 using Remora.Rest.Core;
 using Remora.Results;
 
-[Handler]
+using Woolly.Infrastructure;
+
+[Handler, GatewayResponder]
 public static partial class RegisterGuildCommand
 {
-    public record struct Command(IGuildCreate Guild);
-
-    private static ValueTask<Result> HandleAsync(Command c, ILogger<Handler> logger, CancellationToken token)
+    private static ValueTask<Result> HandleAsync(IGuildCreate c, ILogger<Handler> logger, CancellationToken token)
     {
-        if (c.Guild.Guild.Value is not IGuildCreate.IAvailableGuild guild)
+        if (c.Guild.Value is not IGuildCreate.IAvailableGuild guild)
         {
             return ValueTask.FromResult(Result.FromSuccess());
         }
@@ -37,7 +37,7 @@ public static partial class RegisterGuildCommand
     {
         public async Task<Result> RespondAsync(IGuildCreate gatewayEvent, CancellationToken ct)
         {
-            return await HandleAsync(new Command(gatewayEvent), ct);
+            return await HandleAsync(gatewayEvent, ct);
         }
     }
 }

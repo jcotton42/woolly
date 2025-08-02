@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="src/Woolly.Generators/Woolly.Generators.csproj" />
   <Project Path="src/Woolly/Woolly.csproj" />
 </Solution>

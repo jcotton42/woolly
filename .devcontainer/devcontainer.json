@@ -26,7 +26,8 @@
                 "ms-dotnettools.csdevkit",
                 "streetsidesoftware.code-spell-checker",
                 "github.vscode-github-actions",
-                "oderwat.indent-rainbow"
+                "oderwat.indent-rainbow",
+                "333fred.net-compiler-developer-sdk@prerelease"
             ]
         }
     },
